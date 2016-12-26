@@ -13,6 +13,10 @@
 #include "lib_x86_64.h"
 #endif
 
+#ifdef __dos__
+#include "lib_dos.h"
+#endif
+
 /* architecture independent */
 
 #ifndef EXIT_SUCCESS
@@ -54,7 +58,61 @@ tolower(int c)
 	return c;
 }
 
+/* stdio.h */
+
+static int __attribute__((unused))
+putchar(int c)
+{
+	write(1, (uint8_t *)&c, 1);
+
+	return c;
+}
+
 /* string.h */
+
+char * __attribute__((unused))
+strchr(const char *s, int c)
+{
+	char ch = c;
+
+	while (*s) {
+		if (*s == ch)
+			return (char *)s;
+		++s;
+	}
+
+	if (c != '\0') {
+		return NULL;
+	} else {
+		return (char *)s;
+	}
+}
+
+int __attribute__((unused))
+strcmp(const char *s1, const char *s2)
+{
+	while (*s1 && (*s1 == *s2)) {
+		++s1;
+		++s2;
+	}
+
+	return *s1 - *s2;
+}
+
+int __attribute__((unused))
+strncmp(const char *s1, const char *s2, size_t n)
+{
+	const char *last = s1 + n;
+
+	while (*s1 && s1 != last) {
+		if (*s1 != *s2)
+			return *s1 - *s2;
+		++s1;
+		++s2;
+	}
+
+	return 0;
+}
 
 static size_t __attribute__((unused))
 strlen(const char *s)
@@ -65,6 +123,20 @@ strlen(const char *s)
 		++len;
 
 	return len;
+}
+
+/* misc */
+
+static inline void __attribute__((unused))
+write_stdout(const char *s)
+{
+	write(1, s, strlen(s));
+}
+
+static inline void __attribute__((unused))
+write_stderr(const char *s)
+{
+	write(2, s, strlen(s));
 }
 
 #endif

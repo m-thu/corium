@@ -1,29 +1,47 @@
-all : $(UTILS)
-
 ARCH ?= $(shell uname -m)
 
 ifeq ($(ARCH),x86_64)
-UTILS = true false
-CFLAGS = -std=c99 -pedantic -Wall -Wextra -Os -pipe \
+UTILS = true false yes clear echo printenv
+CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe \
 	 -fno-unwind-tables -fno-asynchronous-unwind-tables
 STRIP = strip
 EXE = $(patsubst %,x86_64/%,$(UTILS))
-endif
 
-ifeq ($(ARCH),x86_64)
 all : $(EXE)
 
-x86_64/%.o : %.c lib.h
+x86_64/%.o : %.c lib.h lib_x86_64.h
 	[ -d x86_64 ] || mkdir x86_64
 	$(CC) $(CFLAGS) -c -nostdlib -ffreestanding $< -o $@
 
 x86_64/% : x86_64/%.o start_x86_64.o
-	$(LD) start_x86_64.o $< -o $@
+	$(LD) --gc-sections start_x86_64.o $< -o $@
 	$(STRIP) -R .comment $@
-endif
 
 start_x86_64.o : start_x86_64.s
-	$(AS) $< -o $@
+endif
+
+ifeq ($(ARCH),dos)
+UTILS = true false
+CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe -D__dos__ \
+	 -m32 -march=i386 -fno-toplevel-reorder \
+	 -fno-unwind-tables -fno-asynchronous-unwind-tables
+ASFLAGS = --32 -march=i386
+EXE = $(patsubst %,dos/%.com,$(UTILS))
+
+all : $(EXE)
+
+dos/%.o : %.c lib.h
+	[ -d dos ] || mkdir dos
+	$(CC) $(CFLAGS) -c -nostdlib -ffreestanding $< -o $@
+
+dos/%.com : dos/%.o start_dos.o
+	$(LD) --gc-sections -n -m elf_i386 -T dos.ld start_dos.o $< -o $@
+
+start_dos.o : start_dos.s
+endif
+
+dosbox :
+	@dosbox dos &
 
 cppcheck :
 	cppcheck --enable=all *.c
@@ -31,5 +49,6 @@ cppcheck :
 clean :
 	rm -f *.o
 	rm -rf x86_64/
+	rm -rf dos/
 
-.PHONY : clean cppcheck
+.PHONY : clean cppcheck dosbox
