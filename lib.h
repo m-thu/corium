@@ -70,7 +70,7 @@ putchar(int c)
 
 /* string.h */
 
-char * __attribute__((unused))
+static char * __attribute__((unused))
 strchr(const char *s, int c)
 {
 	char ch = c;
@@ -88,7 +88,7 @@ strchr(const char *s, int c)
 	}
 }
 
-int __attribute__((unused))
+static int __attribute__((unused))
 strcmp(const char *s1, const char *s2)
 {
 	while (*s1 && (*s1 == *s2)) {
@@ -99,7 +99,7 @@ strcmp(const char *s1, const char *s2)
 	return *s1 - *s2;
 }
 
-int __attribute__((unused))
+static int __attribute__((unused))
 strncmp(const char *s1, const char *s2, size_t n)
 {
 	const char *last = s1 + n;

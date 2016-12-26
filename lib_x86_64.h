@@ -11,9 +11,9 @@ extern const char **environ;
 /* prototypes for functions defined in lib.h */
 
 static size_t strlen(const char *);
-char *strchr(const char *, int);
-int strcmp(const char *, const char *);
-int strncmp(const char *, const char *, size_t);
+static char *strchr(const char *, int);
+static int strcmp(const char *, const char *);
+static int strncmp(const char *, const char *, size_t);
 
 /* definitions from <sys/types.h> */
 
@@ -30,7 +30,7 @@ exit(int status)
 		: "memory");
 }
 
-char * __attribute__((unused))
+static char * __attribute__((unused))
 getenv(const char *name)
 {
 	const char **env = environ;

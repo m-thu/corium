@@ -3,7 +3,8 @@ ARCH ?= $(shell uname -m)
 ifeq ($(ARCH),x86_64)
 UTILS = true false yes clear echo printenv
 CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe \
-	 -fno-unwind-tables -fno-asynchronous-unwind-tables
+	 -fno-unwind-tables -fno-asynchronous-unwind-tables \
+	 -Wno-unused-function
 STRIP = strip
 EXE = $(patsubst %,x86_64/%,$(UTILS))
 
@@ -24,7 +25,8 @@ ifeq ($(ARCH),dos)
 UTILS = true false
 CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe -D__dos__ \
 	 -m32 -march=i386 -fno-toplevel-reorder \
-	 -fno-unwind-tables -fno-asynchronous-unwind-tables
+	 -fno-unwind-tables -fno-asynchronous-unwind-tables \
+	 -Wno-unused-function
 ASFLAGS = --32 -march=i386
 EXE = $(patsubst %,dos/%.com,$(UTILS))
 
