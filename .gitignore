@@ -35,3 +35,6 @@
 
 # Debug files
 *.dSYM/
+
+# Directories
+x86_64/
