@@ -54,6 +54,32 @@ getenv(const char *name)
 	return NULL;
 }
 
+/* time.h */
+
+struct timespec {
+	long tv_sec;
+	long tv_nsec;
+};
+
+static int __attribute__((unused))
+nanosleep(const struct timespec *req, struct timespec *rem)
+{
+	int ret;
+
+	asm volatile ("movq $35, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (req), "S" (rem)
+		: "%rcx", "%r11", "cc", "memory");
+
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+
+	return 0;
+}
+
 /* unistd.h */
 
 static char * __attribute__((unused))
@@ -91,6 +117,18 @@ sethostname(const char *name, size_t len)
 	}
 
 	return 0;
+}
+
+static unsigned int __attribute__((unused))
+sleep(unsigned int seconds)
+{
+	struct timespec req, rem;
+
+	req.tv_sec = seconds;
+	req.tv_nsec = 0;
+	nanosleep(&req, &rem);
+
+	return seconds - rem.tv_sec;
 }
 
 static ssize_t __attribute__((unused))
