@@ -68,6 +68,28 @@ putchar(int c)
 	return c;
 }
 
+/* stdlib.h */
+
+/* TODO: handle trailing whitespace(s), +- */
+static int __attribute__((unused))
+atoi(const char *nptr)
+{
+	int ret = 0,
+	    weight = 1,
+	    off = 0;
+
+	while (isdigit(*nptr)) {
+		++off;
+		++nptr;
+	}
+	while (off--) {
+	       ret += weight * (*--nptr-'0');
+	       weight *= 10;
+	}
+
+	return ret;
+}
+
 /* string.h */
 
 static char * __attribute__((unused))

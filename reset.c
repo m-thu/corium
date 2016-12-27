@@ -1,7 +1,7 @@
 /*
- * Invocation: clear
+ * Invocation: reset
  *
- * Clear screen
+ * Reset terminal
  *
  * Return value: always 0
  *
@@ -13,8 +13,7 @@
 
 int main()
 {
-	/* clear VT100 terminal */
-	write(1, ESC"[H" ESC"[J", 6);
+	write(1, ESC"c" ESC"(B" ESC"[0m" ESC"[J" ESC"[?25h", 18);
 
 	return EXIT_SUCCESS;
 }

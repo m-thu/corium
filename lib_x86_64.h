@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdarg.h>
 
 /* environment variables */
 extern const char **environ;
@@ -17,10 +18,70 @@ static int strncmp(const char *, const char *, size_t);
 
 /* definitions from sys/types.h */
 
-typedef int64_t ssize_t;
+typedef int64_t  ssize_t;
+typedef uint32_t mode_t;
 
 /* errno.h */
+
 extern int errno;
+
+/* fcntl.h */
+
+#define O_RDONLY    00
+#define O_WRONLY    01
+#define O_RDWR      02
+#define O_APPEND    02000
+#define O_ASYNC     020000
+#define O_CLOEXEC   02000000
+#define O_CREAT     0100
+#define O_DIRECT    040000
+#define O_DIRECTORY 0200000
+#define O_EXCL      0200
+#define O_LARGEFILE 0100000
+#define O_NOATIME   01000000
+#define O_NOCTTY    0400
+#define O_NOFOLLOW  0400000
+#define O_NONBLOCK  04000
+#define O_NDELAY    O_NONBLOCK
+#define O_PATH      010000000
+#define O_SYNC      04010000
+#define O_TRUNC     01000
+
+static int __attribute__((unused))
+open(const char *pathname, int flags, ...)
+{
+	int ret;
+	mode_t mode = 0;
+	va_list ap;
+
+	va_start(ap, flags);
+	if (flags & O_CREAT)
+		mode = va_arg(ap, mode_t);
+	va_end(ap);
+
+	asm volatile ("movq $2, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (pathname), "S" (flags), "d" (mode)
+		: "%rcx", "%r11", "cc", "memory");
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+creat(const char *pathname, mode_t mode)
+{
+	return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
+}
+
+/* linux/vt.h */
+
+#define VT_ACTIVATE   0x5606
+#define VT_WAITACTIVE 0x5607
 
 /* stdlib.h */
 
@@ -72,15 +133,32 @@ nanosleep(const struct timespec *req, struct timespec *rem)
 		: "D" (req), "S" (rem)
 		: "%rcx", "%r11", "cc", "memory");
 
-	if (ret < 0) {
-		errno = -ret;
-		return -1;
-	}
+	if (ret >= 0)
+		return 0;
 
-	return 0;
+	errno = -ret;
+	return -1;
 }
 
 /* unistd.h */
+
+static int __attribute__((unused))
+close(int fd)
+{
+	int ret;
+
+	asm volatile ("movq $3, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (fd)
+		: "%rcx", "%r11", "cc", "memory");
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
 
 static char * __attribute__((unused))
 getcwd(char *buf, size_t size)
@@ -111,12 +189,11 @@ sethostname(const char *name, size_t len)
 		: "D" (name), "S" (len)
 		: "%rcx", "%r11", "cc", "memory");
 
-	if (ret < 0) {
-		errno = -ret;
-		return -1;
-	}
+	if (ret >= 0)
+		return 0;
 
-	return 0;
+	errno = -ret;
+	return -1;
 }
 
 static unsigned int __attribute__((unused))
@@ -142,23 +219,65 @@ write(int fd, const void *buf, size_t count)
 		: "D" (fd), "S" (buf), "d" (count)
 		: "%rcx", "%r11", "cc", "memory");
 
-	if (ret < 0) {
-		errno = -ret;
-		return -1;
-	}
+	if (ret >= 0)
+		return ret;
 
-	return ret;
+	errno = -ret;
+	return -1;
 }
+
+/* sys/ioctl.h */
+
+static int __attribute__((unused))
+ioctl(int d, int request, ...)
+{
+	int ret;
+	va_list ap;
+	size_t arg;
+
+	va_start(ap, request);
+	arg = va_arg(ap, size_t);
+	va_end(ap);
+
+	asm volatile ("movq $16, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (d), "S" (request), "d" (arg)
+		: "%rcx", "%r11", "cc", "memory");
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+/* sys/stat.h */
+
+#define S_IRWXU 00700
+#define S_IRUSR 00400
+#define S_IWUSR 00200
+#define S_IXUSR 00100
+
+#define S_IRWXG 00070
+#define S_IRGRP 00040
+#define S_IWGRP 00020
+#define S_IXGRP 00010
+
+#define S_IRWXO 00007
+#define S_IROTH 00004
+#define S_IWOTH 00002
+#define S_IXOTH 00001
 
 /* sys/utsname.h */
 
 #define __NEW_UTS_LEN 64
 struct utsname {
-	char sysname[__NEW_UTS_LEN + 1];
-	char nodename[__NEW_UTS_LEN + 1];
-	char release[__NEW_UTS_LEN + 1];
-	char version[__NEW_UTS_LEN + 1];
-	char machine[__NEW_UTS_LEN + 1];
+	char sysname   [__NEW_UTS_LEN + 1];
+	char nodename  [__NEW_UTS_LEN + 1];
+	char release   [__NEW_UTS_LEN + 1];
+	char version   [__NEW_UTS_LEN + 1];
+	char machine   [__NEW_UTS_LEN + 1];
 	char domainname[__NEW_UTS_LEN + 1];
 };
 
@@ -173,12 +292,11 @@ uname(struct utsname *buf)
 		: "D" (buf)
 		: "%rcx", "%r11", "cc", "memory");
 
-	if (ret < 0) {
-		errno = -ret;
-		return -1;
-	}
+	if (ret >= 0)
+		return 0;
 
-	return 0;
+	errno = -ret;
+	return -1;
 }
 
 #endif
