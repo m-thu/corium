@@ -53,6 +53,37 @@ getenv(const char *name)
 
 /* unistd.h */
 
+static char * __attribute__((unused))
+getcwd(char *buf, size_t size)
+{
+	int ret;
+
+	asm volatile ("movq $79, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (buf), "S" (size)
+		: "%rcx", "%r11", "cc", "memory");
+
+	if (ret >= 0)
+		return buf;
+
+	return NULL;
+}
+
+static int __attribute__((unused))
+sethostname(const char *name, size_t len)
+{
+	int ret;
+
+	asm volatile ("movq $170, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (name), "S" (len)
+		: "%rcx", "%r11", "cc", "memory");
+
+	return ret;
+}
+
 static ssize_t __attribute__((unused))
 write(int fd, const void *buf, size_t count)
 {
@@ -63,6 +94,33 @@ write(int fd, const void *buf, size_t count)
 		: "=a" (ret)
 		: "D" (fd), "S" (buf), "d" (count)
 		: "%rcx", "%r11", "cc", "memory");
+
+	return ret;
+}
+
+/* <sys/utsname.h> */
+
+#define __NEW_UTS_LEN 64
+struct utsname {
+	char sysname[__NEW_UTS_LEN + 1];
+	char nodename[__NEW_UTS_LEN + 1];
+	char release[__NEW_UTS_LEN + 1];
+	char version[__NEW_UTS_LEN + 1];
+	char machine[__NEW_UTS_LEN + 1];
+	char domainname[__NEW_UTS_LEN + 1];
+};
+
+static int __attribute__((unused))
+uname(struct utsname *buf)
+{
+	int ret;
+
+	asm volatile ("movq $63, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (buf)
+		: "%rcx", "%r11", "cc", "memory");
+
 	return ret;
 }
 
