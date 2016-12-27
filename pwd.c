@@ -31,14 +31,14 @@ int main(int argc, char *argv[])
 			write_stdout(wd_env);
 			write(1, "\n", 1);
 		} else {
-			exit(EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 	} else {
 		if (getcwd(wd, PATH_MAX)) {
 			write_stdout(wd);
 			write(1, "\n", 1);
 		} else {
-			exit(EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 	}
 

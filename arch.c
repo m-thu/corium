@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	struct utsname uts;
 
 	if (uname(&uts) < 0) {
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	write_stdout(uts.machine);

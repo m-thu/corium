@@ -22,8 +22,10 @@ _start:
 	movq $60, %rax
 	syscall
 
-.globl environ
+.globl environ, errno
 
 .data
 environ:
 	.quad 0
+errno:
+	.int 0

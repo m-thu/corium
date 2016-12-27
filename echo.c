@@ -92,7 +92,7 @@ static void handle_escape(char *s)
 				return;
 			/* produce no further output */
 			case 'c':
-				exit(EXIT_SUCCESS);
+				_exit(EXIT_SUCCESS);
 
 			case '\\':
 				write(1, "\\", 1);

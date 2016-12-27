@@ -15,14 +15,17 @@ static char *strchr(const char *, int);
 static int strcmp(const char *, const char *);
 static int strncmp(const char *, const char *, size_t);
 
-/* definitions from <sys/types.h> */
+/* definitions from sys/types.h */
 
 typedef int64_t ssize_t;
+
+/* errno.h */
+extern int errno;
 
 /* stdlib.h */
 
 static void __attribute__((unused))
-exit(int status)
+_exit(int status)
 {
 	asm volatile ("movq $60, %%rax \n\t"
 		"syscall"
@@ -67,6 +70,7 @@ getcwd(char *buf, size_t size)
 	if (ret >= 0)
 		return buf;
 
+	errno = -ret;
 	return NULL;
 }
 
@@ -81,7 +85,12 @@ sethostname(const char *name, size_t len)
 		: "D" (name), "S" (len)
 		: "%rcx", "%r11", "cc", "memory");
 
-	return ret;
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+
+	return 0;
 }
 
 static ssize_t __attribute__((unused))
@@ -95,10 +104,15 @@ write(int fd, const void *buf, size_t count)
 		: "D" (fd), "S" (buf), "d" (count)
 		: "%rcx", "%r11", "cc", "memory");
 
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+
 	return ret;
 }
 
-/* <sys/utsname.h> */
+/* sys/utsname.h */
 
 #define __NEW_UTS_LEN 64
 struct utsname {
@@ -121,7 +135,12 @@ uname(struct utsname *buf)
 		: "D" (buf)
 		: "%rcx", "%r11", "cc", "memory");
 
-	return ret;
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+
+	return 0;
 }
 
 #endif

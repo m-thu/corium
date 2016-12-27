@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 	     opt_p = false;
 
 	if (uname(&uts) < 0) {
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	/* No option: -s */
