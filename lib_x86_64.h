@@ -6,7 +6,31 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-/* environment variables */
+/* syscalls */
+
+#define SYSCALL1(nr, param1, retval) \
+asm volatile ("movq $"#nr", %%rax \n\t" \
+	"syscall" \
+	: "=a" ((retval)) \
+	: "D" ((param1)) \
+	: "%rcx", "%r11", "cc", "memory");
+
+#define SYSCALL2(nr, param1, param2, retval) \
+asm volatile ("movq $"#nr", %%rax \n\t" \
+	"syscall" \
+	: "=a" ((retval)) \
+	: "D" ((param1)), "S" ((param2)) \
+	: "%rcx", "%r11", "cc", "memory");
+
+#define SYSCALL3(nr, param1, param2, param3, retval) \
+asm volatile ("movq $"#nr", %%rax \n\t" \
+	"syscall" \
+	: "=a" ((retval)) \
+	: "D" ((param1)), "S" ((param2)), "d" ((param3)) \
+	: "%rcx", "%r11", "cc", "memory");
+
+/* environment variables (defined in start_x86_64.s) */
+
 extern const char **environ;
 
 /* prototypes for functions defined in lib.h */
@@ -21,7 +45,7 @@ static int strncmp(const char *, const char *, size_t);
 typedef int64_t  ssize_t;
 typedef uint32_t mode_t;
 
-/* errno.h */
+/* errno.h (defined in start_x86_64.s) */
 
 extern int errno;
 
@@ -193,11 +217,7 @@ open(const char *pathname, int flags, ...)
 		mode = va_arg(ap, mode_t);
 	va_end(ap);
 
-	asm volatile ("movq $2, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (pathname), "S" (flags), "d" (mode)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL3(2, pathname, flags, mode, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -222,10 +242,9 @@ creat(const char *pathname, mode_t mode)
 static void __attribute__((unused))
 _exit(int status)
 {
-	asm volatile ("movq $60, %%rax \n\t"
-		"syscall"
-		:: "D" (status)
-		: "memory");
+	int ret;
+
+	SYSCALL1(60, status, ret)
 }
 
 static char * __attribute__((unused))
@@ -261,11 +280,7 @@ nanosleep(const struct timespec *req, struct timespec *rem)
 {
 	int ret;
 
-	asm volatile ("movq $35, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (req), "S" (rem)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL2(35, req, rem, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -281,11 +296,7 @@ chdir(const char *path)
 {
 	int ret;
 
-	asm volatile ("movq $80, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (path)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL1(80, path, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -299,11 +310,7 @@ chroot(const char *path)
 {
 	int ret;
 
-	asm volatile ("movq $161, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (path)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL1(161, path, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -317,11 +324,7 @@ close(int fd)
 {
 	int ret;
 
-	asm volatile ("movq $3, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (fd)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL1(3, fd, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -336,11 +339,7 @@ execve(const char *filename, char *const argv[],
 {
 	int ret;
 
-	asm volatile ("movq $59, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (filename), "S" (argv), "d" (envp)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL3(59, filename, argv, envp, ret)
 
 	if (ret < 0) {
 		errno = -ret;
@@ -356,11 +355,7 @@ getcwd(char *buf, size_t size)
 {
 	int ret;
 
-	asm volatile ("movq $79, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (buf), "S" (size)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL2(79, buf, size, ret)
 
 	if (ret >= 0)
 		return buf;
@@ -374,11 +369,7 @@ read(int fd, void *buf, size_t count)
 {
 	ssize_t ret;
 
-	asm volatile ("movq $0, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (fd), "S" (buf), "d" (count)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL3(0, fd, buf, count, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -392,11 +383,7 @@ setdomainname(const char *name, size_t len)
 {
 	int ret;
 
-	asm volatile ("movq $171, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (name), "S" (len)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL2(171, name, len, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -410,11 +397,7 @@ sethostname(const char *name, size_t len)
 {
 	int ret;
 
-	asm volatile ("movq $170, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (name), "S" (len)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL2(170, name, len, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -440,11 +423,7 @@ write(int fd, const void *buf, size_t count)
 {
 	ssize_t ret;
 
-	asm volatile ("movq $1, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (fd), "S" (buf), "d" (count)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL3(1, fd, buf, count, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -466,11 +445,7 @@ ioctl(int d, int request, ...)
 	arg = va_arg(ap, size_t);
 	va_end(ap);
 
-	asm volatile ("movq $16, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (d), "S" (request), "d" (arg)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL3(16, d, request, arg, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -513,11 +488,7 @@ uname(struct utsname *buf)
 {
 	int ret;
 
-	asm volatile ("movq $63, %%rax \n\t"
-		"syscall"
-		: "=a" (ret)
-		: "D" (buf)
-		: "%rcx", "%r11", "cc", "memory");
+	SYSCALL1(63, buf, ret)
 
 	if (ret >= 0)
 		return 0;
