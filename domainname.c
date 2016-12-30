@@ -1,7 +1,7 @@
 /*
- * Invocation: hostname [HOSTNAME]
+ * Invocation: domainname [DOMAINNAME]
  *
- * Display or set hostname
+ * Display or set domainname
  *
  * Return value:
  *   0: success
@@ -17,12 +17,12 @@ int main(int argc, char *argv[])
 		struct utsname uts;
 
 		uname(&uts);
-		write_stdout(uts.nodename);
+		write_stdout(uts.domainname);
 		write(1, "\n", 1);
 	} else if (argc == 2) {
-		if (sethostname(argv[1], strlen(argv[1])) < 0) {
+		if (setdomainname(argv[1], strlen(argv[1])) < 0) {
 			switch (errno) {
-			case ENAMETOOLONG:
+			case EINVAL:
 				write_stderr("name too long\n");
 				break;
 			case EPERM:
