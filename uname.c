@@ -27,18 +27,21 @@
 
 #include "lib.h"
 
+enum {
+	OPT_S = 1<<0,
+	OPT_N = 1<<1,
+	OPT_R = 1<<2,
+	OPT_V = 1<<3,
+	OPT_M = 1<<4,
+	OPT_P = 1<<5
+};
+
 static void print_property(char *);
 
 int main(int argc, char *argv[])
 {
 	struct utsname uts;
-	bool opt_a = false,
-	     opt_s = false,
-	     opt_n = false,
-	     opt_r = false,
-	     opt_v = false,
-	     opt_m = false,
-	     opt_p = false;
+	int opt = 0;
 
 	if (uname(&uts) < 0) {
 		return EXIT_FAILURE;
@@ -46,7 +49,7 @@ int main(int argc, char *argv[])
 
 	/* No option: -s */
 	if (argc == 1)
-		opt_s = true;
+		opt |= OPT_S;
 
 	/* Parse options */
 	for (int i = 1; i < argc; ++i) {
@@ -59,37 +62,31 @@ int main(int argc, char *argv[])
 
 		switch (argv[i][1]) {
 		case 'a':
-			opt_a = true;
-			opt_s = true;
-			opt_n = true;
-			opt_r = true;
-			opt_v = true;
-			opt_m = true;
-			opt_p = true;
+			opt |= OPT_S|OPT_N|OPT_R|OPT_V|OPT_M|OPT_P;
 			break;
 
 		case 's':
-			opt_s = true;
+			opt |= OPT_S;
 			break;
 
 		case 'n':
-			opt_n = true;
+			opt |= OPT_N;
 			break;
 
 		case 'r':
-			opt_r = true;
+			opt |= OPT_R;
 			break;
 
 		case 'v':
-			opt_v = true;
+			opt |= OPT_V;
 			break;
 
 		case 'm':
-			opt_m = true;
+			opt |= OPT_M;
 			break;
 
 		case 'p':
-			opt_p = true;
+			opt |= OPT_P;
 			break;
 
 		/* Ignore unknown options */
@@ -98,19 +95,20 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (opt_s)
+	if (opt & OPT_S)
 		print_property(uts.sysname);
-	if (opt_n)
+	if (opt & OPT_N)
 		print_property(uts.nodename);
-	if (opt_r)
+	if (opt & OPT_R)
 		print_property(uts.release);
-	if (opt_v)
+	if (opt & OPT_V)
 		print_property(uts.version);
-	if (opt_m)
+	if (opt & OPT_M)
 		print_property(uts.machine);
-	if (opt_p)
-		if (!opt_a)
-			write_stdout("unknown");
+	if (opt & OPT_P)
+		if ((opt&(OPT_S|OPT_N|OPT_R|OPT_V|OPT_M|OPT_P))
+		    != (OPT_S|OPT_N|OPT_R|OPT_V|OPT_M|OPT_P))
+			print_property("unknown");
 	write(1, "\n", 1);
 
 	return EXIT_SUCCESS;
