@@ -1,5 +1,5 @@
 /*
- * Invocation: echo NAME [SUFFIX]
+ * Invocation: basename NAME [SUFFIX]
  *
  * Print NAME without leading directories and trailing SUFFIX, if specified.
  *
