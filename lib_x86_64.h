@@ -8,7 +8,15 @@
 
 /* syscalls */
 
+#include "syscalls_x86_64.h"
+
+/* syscall numbers are defined as macros,
+   so the argument "nr" to SYSCALLxx has to be
+   expanded before stringification */
+
 #define SYSCALL1(nr, param1, retval) \
+	__SYSCALL1(nr, param1, retval)
+#define __SYSCALL1(nr, param1, retval) \
 asm volatile ("movq $"#nr", %%rax \n\t" \
 	"syscall" \
 	: "=a" ((retval)) \
@@ -16,6 +24,8 @@ asm volatile ("movq $"#nr", %%rax \n\t" \
 	: "%rcx", "%r11", "cc", "memory");
 
 #define SYSCALL2(nr, param1, param2, retval) \
+	__SYSCALL2(nr, param1, param2, retval)
+#define __SYSCALL2(nr, param1, param2, retval) \
 asm volatile ("movq $"#nr", %%rax \n\t" \
 	"syscall" \
 	: "=a" ((retval)) \
@@ -23,6 +33,8 @@ asm volatile ("movq $"#nr", %%rax \n\t" \
 	: "%rcx", "%r11", "cc", "memory");
 
 #define SYSCALL3(nr, param1, param2, param3, retval) \
+	__SYSCALL3(nr, param1, param2, param3, retval)
+#define __SYSCALL3(nr, param1, param2, param3, retval) \
 asm volatile ("movq $"#nr", %%rax \n\t" \
 	"syscall" \
 	: "=a" ((retval)) \
@@ -217,7 +229,7 @@ open(const char *pathname, int flags, ...)
 		mode = va_arg(ap, mode_t);
 	va_end(ap);
 
-	SYSCALL3(2, pathname, flags, mode, ret)
+	SYSCALL3(__NR_open, pathname, flags, mode, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -244,7 +256,7 @@ _exit(int status)
 {
 	int ret;
 
-	SYSCALL1(60, status, ret)
+	SYSCALL1(__NR_exit, status, ret)
 }
 
 static char * __attribute__((unused))
@@ -280,7 +292,7 @@ nanosleep(const struct timespec *req, struct timespec *rem)
 {
 	int ret;
 
-	SYSCALL2(35, req, rem, ret)
+	SYSCALL2(__NR_nanosleep, req, rem, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -296,7 +308,7 @@ chdir(const char *path)
 {
 	int ret;
 
-	SYSCALL1(80, path, ret)
+	SYSCALL1(__NR_chdir, path, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -310,7 +322,7 @@ chroot(const char *path)
 {
 	int ret;
 
-	SYSCALL1(161, path, ret)
+	SYSCALL1(__NR_chroot, path, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -324,7 +336,7 @@ close(int fd)
 {
 	int ret;
 
-	SYSCALL1(3, fd, ret)
+	SYSCALL1(__NR_close, fd, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -339,7 +351,7 @@ execve(const char *filename, char *const argv[],
 {
 	int ret;
 
-	SYSCALL3(59, filename, argv, envp, ret)
+	SYSCALL3(__NR_execve, filename, argv, envp, ret)
 
 	if (ret < 0) {
 		errno = -ret;
@@ -355,7 +367,7 @@ getcwd(char *buf, size_t size)
 {
 	int ret;
 
-	SYSCALL2(79, buf, size, ret)
+	SYSCALL2(__NR_getcwd, buf, size, ret)
 
 	if (ret >= 0)
 		return buf;
@@ -369,7 +381,7 @@ read(int fd, void *buf, size_t count)
 {
 	ssize_t ret;
 
-	SYSCALL3(0, fd, buf, count, ret)
+	SYSCALL3(__NR_read, fd, buf, count, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -383,7 +395,7 @@ setdomainname(const char *name, size_t len)
 {
 	int ret;
 
-	SYSCALL2(171, name, len, ret)
+	SYSCALL2(__NR_setdomainname, name, len, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -397,7 +409,7 @@ sethostname(const char *name, size_t len)
 {
 	int ret;
 
-	SYSCALL2(170, name, len, ret)
+	SYSCALL2(__NR_sethostname, name, len, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -423,7 +435,7 @@ write(int fd, const void *buf, size_t count)
 {
 	ssize_t ret;
 
-	SYSCALL3(1, fd, buf, count, ret)
+	SYSCALL3(__NR_write, fd, buf, count, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -445,7 +457,7 @@ ioctl(int d, int request, ...)
 	arg = va_arg(ap, size_t);
 	va_end(ap);
 
-	SYSCALL3(16, d, request, arg, ret)
+	SYSCALL3(__NR_ioctl, d, request, arg, ret)
 
 	if (ret >= 0)
 		return ret;
@@ -488,7 +500,7 @@ uname(struct utsname *buf)
 {
 	int ret;
 
-	SYSCALL1(63, buf, ret)
+	SYSCALL1(__NR_uname, buf, ret)
 
 	if (ret >= 0)
 		return 0;
