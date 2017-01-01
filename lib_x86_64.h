@@ -14,6 +14,14 @@
    so the argument "nr" to SYSCALLxx has to be
    expanded before stringification */
 
+#define SYSCALL0(nr, retval) \
+	__SYSCALL0(nr, retval)
+#define __SYSCALL0(nr, retval) \
+asm volatile ("movq $"#nr", %%rax \n\t" \
+	"syscall" \
+	:  "=a" ((retval)) \
+	:: "%rcx", "%r11", "cc", "memory");
+
 #define SYSCALL1(nr, param1, retval) \
 	__SYSCALL1(nr, param1, retval)
 #define __SYSCALL1(nr, param1, retval) \
@@ -41,6 +49,17 @@ asm volatile ("movq $"#nr", %%rax \n\t" \
 	: "D" ((param1)), "S" ((param2)), "d" ((param3)) \
 	: "%rcx", "%r11", "cc", "memory");
 
+#define SYSCALL4(nr, param1, param2, param3, param4, retval) \
+	__SYSCALL4(nr, param1, param2, param3, param4, retval)
+#define __SYSCALL4(nr, param1, param2, param3, param4, retval) \
+do { \
+	register uint64_t p4 asm("r10") = (uint64_t)(param4); \
+	asm volatile ("movq $"#nr", %%rax \n\t" \
+		"syscall" \
+		: "=a" ((ret)) \
+		: "D" ((param1)), "S" ((param2)), "d" ((param3)), "r" ((p4)) \
+		: "%rcx", "%r11", "cc", "memory"); \
+} while (0);
 /* environment variables (defined in start_x86_64.s) */
 
 extern const char **environ;
@@ -244,6 +263,22 @@ creat(const char *pathname, mode_t mode)
 	return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
 }
 
+/* linux/reboot.h */
+
+static int __attribute__((unused))
+reboot(int magic, int magic2, int cmd, void *arg)
+{
+	int ret;
+
+	SYSCALL4(__NR_reboot, magic, magic2, cmd, arg, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
 /* linux/vt.h */
 
 #define VT_ACTIVATE   0x5606
@@ -428,6 +463,14 @@ sleep(unsigned int seconds)
 	nanosleep(&req, &rem);
 
 	return seconds - rem.tv_sec;
+}
+
+static void __attribute__((unused))
+sync(void)
+{
+	int ret;
+
+	SYSCALL0(__NR_sync, ret)
 }
 
 static ssize_t __attribute__((unused))
