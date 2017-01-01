@@ -1,7 +1,7 @@
 /*
  * Invocation: reboot
  *
- * Fore reboot.
+ * Force reboot.
  *
  * Return value:
  *   0: success
