@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	struct utsname uts;
 	int opt = 0;
 
-	if (uname(&uts) < 0) {
+	if (__unlikely(uname(&uts) < 0)) {
 		return EXIT_FAILURE;
 	}
 

@@ -60,6 +60,7 @@ do { \
 		: "D" ((param1)), "S" ((param2)), "d" ((param3)), "r" ((p4)) \
 		: "%rcx", "%r11", "cc", "memory"); \
 } while (0);
+
 /* environment variables (defined in start_x86_64.s) */
 
 extern const char **environ;

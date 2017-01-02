@@ -9,6 +9,10 @@
 #define NULL (void *)0
 #endif
 
+/* branch optimization */
+#define __likely(x)   __builtin_expect(!!(x), 1)
+#define __unlikely(x) __builtin_expect(!!(x), 0)
+
 #ifdef __x86_64__
 #include "lib_x86_64.h"
 #endif

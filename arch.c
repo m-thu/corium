@@ -15,7 +15,7 @@ int main()
 {
 	struct utsname uts;
 
-	if (uname(&uts) < 0) {
+	if (__unlikely(uname(&uts) < 0)) {
 		return EXIT_FAILURE;
 	}
 

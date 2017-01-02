@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	}
 
 	while (*argv) {
-		if (first) {
+		if (__unlikely(first)) {
 			first = false;
 		} else {
 			write(1, " ", 1);

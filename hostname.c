@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 		struct utsname uts;
 		size_t len;
 
-		if (uname(&uts) < 0)
+		if (__unlikely(uname(&uts) < 0))
 			return EXIT_FAILURE;
 
 		len = strlen(uts.nodename);
