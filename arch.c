@@ -11,19 +11,18 @@
 
 #include "lib.h"
 
-int main(int argc, char *argv[])
+int main()
 {
-	(void)argc;
-	(void)argv;
-
 	struct utsname uts;
 
 	if (uname(&uts) < 0) {
 		return EXIT_FAILURE;
 	}
 
-	write_stdout(uts.machine);
-	write(1, "\n", 1);
+	size_t len = strlen(uts.machine);
+
+	uts.machine[len] = '\n';
+	write(1, uts.machine, len+1);
 
 	return EXIT_SUCCESS;
 }

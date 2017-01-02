@@ -40,28 +40,29 @@ static inline uint8_t hextoint(int c)
 
 int main(int argc, char *argv[])
 {
+	(void)argc;
+
 	bool opt_n = false,
 	     opt_e = false;
-	bool first = true,
-	     non_option_arg = false;
+	bool first = true;
 
-	for (int i = 1; i < argc; ++i) {
-		if (argv[i][0] == '-' && argv[i][1] == 'n'
-		    && argv[i][2] == '\0') {
-			if (!non_option_arg) {
-				opt_n = true;
-				continue;
-			}
-		} else if (argv[i][0] == '-' && argv[i][1] == 'e'
-		           && argv[i][2] == '\0') {
-			if (!non_option_arg) {
-				opt_e = true;
-				continue;
-			}
+	/* parse options */
+	while (*++argv) {
+		if ((*argv)[0] != '-')
+			break;
+		if ((*argv)[1] == '\0')
+			break;
+
+		if ((*argv)[1] == 'n' && (*argv)[2] == '\0') {
+			opt_n = true;
+		} else if ((*argv)[1] == 'e' && (*argv)[2] == '\0') {
+			opt_e = true;
 		} else {
-			non_option_arg = true;
+			break;
 		}
+	}
 
+	while (*argv) {
 		if (first) {
 			first = false;
 		} else {
@@ -69,11 +70,13 @@ int main(int argc, char *argv[])
 		}
 
 		if (opt_e) {
-			handle_escape(argv[i]);
+			handle_escape(*argv);
 		} else {
-			write_stdout(argv[i]);
+			write_stdout(*argv);
 		}
-	}
+
+		++argv;
+	};
 
 	if (!opt_n)
 		write(1, "\n", 1);

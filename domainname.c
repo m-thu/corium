@@ -15,10 +15,14 @@ int main(int argc, char *argv[])
 {
 	if (argc == 1) {
 		struct utsname uts;
+		size_t len;
 
-		uname(&uts);
-		write_stdout(uts.domainname);
-		write(1, "\n", 1);
+		if (uname(&uts) < 0)
+			return EXIT_FAILURE;
+
+		len = strlen(uts.domainname);
+		uts.domainname[len] = '\n';
+		write(1, uts.domainname, len+1);
 	} else if (argc == 2) {
 		if (setdomainname(argv[1], strlen(argv[1])) < 0) {
 			switch (errno) {

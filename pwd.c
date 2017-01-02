@@ -35,8 +35,10 @@ int main(int argc, char *argv[])
 		}
 	} else {
 		if (getcwd(wd, PATH_MAX)) {
-			write_stdout(wd);
-			write(1, "\n", 1);
+			size_t len = strlen(wd);
+
+			wd[len] = '\n';
+			write(1, wd, len+1);
 		} else {
 			return EXIT_FAILURE;
 		}
