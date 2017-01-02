@@ -15,7 +15,7 @@
 
 #define EXIT_MSG_ALLOWED     0
 #define EXIT_MSG_NOT_ALLOWED 1
-#define EXIT_ERROR           3
+#define EXIT_ERROR           2
 
 int main(int argc, char *argv[])
 {
