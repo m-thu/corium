@@ -31,6 +31,10 @@
 #define EXIT_FAILURE 1
 #endif
 
+/* prototypes for functions in this header file */
+
+static size_t __attribute__((unused)) strlen(const char *);
+
 /* ctype.h */
 
 static int __attribute__((unused))
@@ -112,6 +116,24 @@ strchr(const char *s, int c)
 	} else {
 		return (char *)s;
 	}
+}
+
+static char * __attribute__((unused))
+strrchr(const char *s, int c)
+{
+	char ch = c;
+	size_t len = strlen(s);
+
+	/* include NULL byte in search */
+	s += len;
+	++len;
+	while (len--) {
+		if (*s == ch)
+			return (char *)s;
+		--s;
+	}
+
+	return NULL;
 }
 
 static int __attribute__((unused))

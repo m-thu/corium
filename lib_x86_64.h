@@ -72,10 +72,42 @@ static char *strchr(const char *, int);
 static int strcmp(const char *, const char *);
 static int strncmp(const char *, const char *, size_t);
 
-/* definitions from sys/types.h */
+/* prototypes for this header file */
 
-typedef int64_t  ssize_t;
-typedef uint32_t mode_t;
+static int __attribute__((unused)) ioctl(int, int, ...);
+
+/* typedefs from sys/types.h */
+
+typedef uint64_t      dev_t;
+typedef unsigned long ino_t;
+typedef uint32_t      mode_t;
+typedef unsigned long nlink_t;
+typedef uint32_t      uid_t;
+typedef uint32_t      gid_t;
+typedef signed long   off_t;
+typedef signed long   blksize_t;
+typedef signed long   blkcnt_t;
+typedef signed long   time_t;
+typedef int64_t       ssize_t;
+
+/* typedefs from termios.h */
+
+typedef unsigned char cc_t;
+typedef unsigned int  speed_t;
+typedef unsigned int  tcflag_t;
+
+/* termios.h */
+
+struct termios {
+	tcflag_t c_iflag;
+	tcflag_t c_oflag;
+	tcflag_t c_cflag;
+	tcflag_t c_lflag;
+	cc_t     c_line;
+	cc_t     c_cc[32];
+	speed_t  c_ispeed;
+	speed_t  c_ospeed;
+};
 
 /* errno.h (defined in start_x86_64.s) */
 
@@ -280,6 +312,39 @@ reboot(int magic, int magic2, int cmd, void *arg)
 	return -1;
 }
 
+/* linux/stat.h */
+
+#define S_IFMT      00170000
+#define S_IFSOCK    0140000
+#define S_IFLNK     0120000
+#define S_IFREG     0100000
+#define S_IFBLK     0060000
+#define S_IFDIR     0040000
+#define S_IFCHR     0020000
+#define S_IFIFO     0010000
+#define S_ISUID     0004000
+#define S_ISGID     0002000
+#define S_ISVTX     0001000
+#define S_ISLNK(m)  (((m) & S_IFMT) == S_IFLNK)
+#define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
+#define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+#define S_ISCHR(m)  (((m) & S_IFMT) == S_IFCHR)
+#define S_ISBLK(m)  (((m) & S_IFMT) == S_IFBLK)
+#define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
+#define S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)
+#define S_IRWXU     00700
+#define S_IRUSR     00400
+#define S_IWUSR     00200
+#define S_IXUSR     00100
+#define S_IRWXG     00070
+#define S_IRGRP     00040
+#define S_IWGRP     00020
+#define S_IXGRP     00010
+#define S_IRWXO     00007
+#define S_IROTH     00004
+#define S_IWOTH     00002
+#define S_IXOTH     00001
+
 /* linux/vt.h */
 
 #define VT_ACTIVATE   0x5606
@@ -398,6 +463,41 @@ execve(const char *filename, char *const argv[],
 	return 0;
 }
 
+struct stat {
+	unsigned long st_dev;
+	unsigned long st_ino;
+	unsigned long st_nlink;
+	unsigned int  st_mode;
+	unsigned int  st_uid;
+	unsigned int  st_gid;
+	unsigned int  __pad0;
+	unsigned long st_rdev;
+	long          st_size;
+	long          st_blksize;
+	long          st_blocks;
+	unsigned long st_atime;
+	unsigned long st_atime_nsec;
+	unsigned long st_mtime;
+	unsigned long st_mtime_nsec;
+	unsigned long st_ctime;
+	unsigned long st_ctime_nsec;
+	long          __unused[3];
+};
+
+static int __attribute__((unused))
+fstat(int fd, struct stat *buf)
+{
+	int ret;
+
+	SYSCALL2(__NR_fstat, fd, buf, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
 static char * __attribute__((unused))
 getcwd(char *buf, size_t size)
 {
@@ -410,6 +510,16 @@ getcwd(char *buf, size_t size)
 
 	errno = -ret;
 	return NULL;
+}
+
+#define TCGETS 0x5401
+
+static int __attribute__((unused))
+isatty(int fd)
+{
+	struct termios term;
+
+	return ioctl(fd, TCGETS, &term) == 0;
 }
 
 static ssize_t __attribute__((unused))
@@ -464,6 +574,20 @@ sleep(unsigned int seconds)
 	nanosleep(&req, &rem);
 
 	return seconds - rem.tv_sec;
+}
+
+static int __attribute__((unused))
+stat(const char *path, struct stat *buf)
+{
+	int ret;
+
+	SYSCALL2(__NR_stat, path, buf, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
 }
 
 static void __attribute__((unused))
@@ -526,6 +650,34 @@ ioctl(int d, int request, ...)
 #define S_IROTH 00004
 #define S_IWOTH 00002
 #define S_IXOTH 00001
+
+static int __attribute__((unused))
+chmod(const char *path, mode_t mode)
+{
+	int ret;
+
+	SYSCALL2(__NR_chmod, path, mode, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+fchmod(int fd, mode_t mode)
+{
+	int ret;
+
+	SYSCALL2(__NR_fchmod, fd, mode, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
 
 /* sys/utsname.h */
 
