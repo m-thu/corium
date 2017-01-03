@@ -89,6 +89,7 @@ typedef signed long   blksize_t;
 typedef signed long   blkcnt_t;
 typedef signed long   time_t;
 typedef int64_t       ssize_t;
+typedef int32_t       pid_t;
 
 /* typedefs from termios.h */
 
@@ -296,6 +297,25 @@ creat(const char *pathname, mode_t mode)
 	return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
 }
 
+#define SPLICE_F_MOVE     (1)
+#define SPLICE_F_NONBLOCK (2)
+#define SPLICE_F_MORE     (4)
+#define SPLICE_F_GIFT     (8)
+
+static ssize_t __attribute__((unused))
+tee(int fd_in, int fd_out, size_t len, unsigned int flags)
+{
+	ssize_t ret;
+
+	SYSCALL4(__NR_tee, fd_in, fd_out, len, flags, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
 /* linux/reboot.h */
 
 static int __attribute__((unused))
@@ -347,8 +367,24 @@ reboot(int magic, int magic2, int cmd, void *arg)
 
 /* linux/vt.h */
 
-#define VT_ACTIVATE   0x5606
-#define VT_WAITACTIVE 0x5607
+#define VT_ACTIVATE   (0x5606)
+#define VT_WAITACTIVE (0x5607)
+
+/* stdio.h */
+
+static int __attribute__((unused))
+rename(const char *oldpath, const char *newpath)
+{
+	int ret;
+
+	SYSCALL2(__NR_rename, oldpath, newpath, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
 
 /* stdlib.h */
 
@@ -419,6 +455,48 @@ chdir(const char *path)
 }
 
 static int __attribute__((unused))
+chown(const char *path, uid_t owner, gid_t group)
+{
+	int ret;
+
+	SYSCALL3(__NR_chown, path, owner, group, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+fchdir(int fd)
+{
+	int ret;
+
+	SYSCALL1(__NR_fchdir, fd, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+fchown(int fd, uid_t owner, gid_t group)
+{
+	int ret;
+
+	SYSCALL3(__NR_fchown, fd, owner, group, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
 chroot(const char *path)
 {
 	int ret;
@@ -447,6 +525,34 @@ close(int fd)
 }
 
 static int __attribute__((unused))
+dup(int oldfd)
+{
+	int ret;
+
+	SYSCALL1(__NR_dup, oldfd, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+dup2(int oldfd, int newfd)
+{
+	int ret;
+
+	SYSCALL2(__NR_dup2, oldfd, newfd, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
 execve(const char *filename, char *const argv[],
        char *const envp[])
 {
@@ -461,6 +567,20 @@ execve(const char *filename, char *const argv[],
 
 	/* never reached */
 	return 0;
+}
+
+static pid_t __attribute__((unused))
+fork(void)
+{
+	pid_t ret;
+
+	SYSCALL0(__NR_fork, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
 }
 
 struct stat {
@@ -512,6 +632,94 @@ getcwd(char *buf, size_t size)
 	return NULL;
 }
 
+static gid_t __attribute__((unused))
+getegid(void)
+{
+	gid_t ret;
+
+	SYSCALL0(__NR_getegid, ret)
+
+	return ret;
+}
+
+static uid_t __attribute__((unused))
+geteuid(void)
+{
+	uid_t ret;
+
+	SYSCALL0(__NR_geteuid, ret)
+
+	return ret;
+}
+
+static gid_t __attribute__((unused))
+getgid(void)
+{
+	gid_t ret;
+
+	SYSCALL0(__NR_getgid, ret)
+
+	return ret;
+}
+
+static pid_t __attribute__((unused))
+getpid(void)
+{
+	pid_t ret;
+
+	SYSCALL0(__NR_getpid, ret);
+
+	return ret;
+}
+
+static pid_t __attribute__((unused))
+getppid(void)
+{
+	pid_t ret;
+
+	SYSCALL0(__NR_getppid, ret)
+
+	return ret;
+}
+
+static int __attribute__((unused))
+getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid)
+{
+	int ret;
+
+	SYSCALL3(__NR_getresgid, rgid, egid, sgid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+getresuid(uid_t *ruid, uid_t *euid, uid_t *suid)
+{
+	int ret;
+
+	SYSCALL3(__NR_getresuid, ruid, euid, suid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static uid_t __attribute__((unused))
+getuid(void)
+{
+	uid_t ret;
+
+	SYSCALL0(__NR_getuid, ret)
+
+	return ret;
+}
+
 #define TCGETS 0x5401
 
 static int __attribute__((unused))
@@ -520,6 +728,110 @@ isatty(int fd)
 	struct termios term;
 
 	return ioctl(fd, TCGETS, &term) == 0;
+}
+
+static int __attribute__((unused))
+lchown(const char *path, uid_t owner, gid_t group)
+{
+	int ret;
+
+	SYSCALL3(__NR_lchown, path, owner, group, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+link(const char *oldpath, const char *newpath)
+{
+	int ret;
+
+	SYSCALL2(__NR_link, oldpath, newpath, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+#define SEEK_SET  0
+#define SEEK_CUR  1
+#define SEEK_END  2
+#define SEEK_DATA 3
+#define SEEK_HOLE 4
+
+static off_t __attribute__((unused))
+lseek(int fd, off_t offset, int whence)
+{
+	off_t ret;
+
+	SYSCALL3(__NR_lseek, fd, offset, whence, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return (off_t)-1;
+}
+
+static int __attribute__((unused))
+lstat(const char *path, struct stat *buf)
+{
+	int ret;
+
+	SYSCALL2(__NR_lstat, path, buf, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+mknod(const char *pathname, mode_t mode, dev_t dev)
+{
+	int ret;
+
+	SYSCALL3(__NR_mknod, pathname, mode, dev, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+pipe(int pipefd[2])
+{
+	int ret;
+
+	SYSCALL1(__NR_pipe, pipefd, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+pipe2(int pipefd[2], int flags)
+{
+	int ret;
+
+	SYSCALL2(__NR_pip2, pipefd, flags, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
 }
 
 static ssize_t __attribute__((unused))
@@ -531,6 +843,34 @@ read(int fd, void *buf, size_t count)
 
 	if (ret >= 0)
 		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static ssize_t __attribute__((unused))
+readlink(const char *path, char *buf, size_t bufsiz)
+{
+	ssize_t ret;
+
+	SYSCALL3(__NR_readlink, path, buf, bufsiz, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+rmdir(const char *pathname)
+{
+	int ret;
+
+	SYSCALL1(__NR_rmdir, pathname, ret)
+
+	if (ret >= 0)
+		return 0;
 
 	errno = -ret;
 	return -1;
@@ -551,11 +891,95 @@ setdomainname(const char *name, size_t len)
 }
 
 static int __attribute__((unused))
+setgid(gid_t gid)
+{
+	int ret;
+
+	SYSCALL1(__NR_setgid, gid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
 sethostname(const char *name, size_t len)
 {
 	int ret;
 
 	SYSCALL2(__NR_sethostname, name, len, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+setregid(gid_t rgid, gid_t egid)
+{
+	int ret;
+
+	SYSCALL2(__NR_setregid, rgid, egid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+setresgid(gid_t rgid, gid_t egid, gid_t sgid)
+{
+	int ret;
+
+	SYSCALL3(__NR_setresgid, rgid, egid, sgid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+	int ret;
+
+	SYSCALL3(__NR_setresuid, ruid, euid, suid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+setreuid(uid_t ruid, uid_t euid)
+{
+	int ret;
+
+	SYSCALL2(__NR_setreuid, ruid, euid, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+setuid(uid_t uid)
+{
+	int ret;
+
+	SYSCALL1(__NR_setuid, uid, ret)
 
 	if (ret >= 0)
 		return 0;
@@ -590,12 +1014,40 @@ stat(const char *path, struct stat *buf)
 	return -1;
 }
 
+static int __attribute__((unused))
+symlink(const char *oldpath, const char *newpath)
+{
+	int ret;
+
+	SYSCALL2(__NR_symlink, oldpath, newpath, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
 static void __attribute__((unused))
 sync(void)
 {
 	int ret;
 
 	SYSCALL0(__NR_sync, ret)
+}
+
+static int __attribute__((unused))
+unlink(const char *pathname)
+{
+	int ret;
+
+	SYSCALL1(__NR_unlink, pathname, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
 }
 
 static ssize_t __attribute__((unused))
@@ -629,6 +1081,107 @@ ioctl(int d, int request, ...)
 
 	if (ret >= 0)
 		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+/* sys/mman.h */
+
+#define PROT_READ  0x1
+#define PROT_WRITE 0x2
+#define PROT_EXEC  0x4
+#define PROT_NONE  0x0
+
+#define MAP_SHARED  0x01
+#define MAP_PRIVATE 0x02
+
+#define MAP_32BIT         0x40
+#define MAP_ANONYMOUS     0x20
+#define MAP_ANON          MAP_ANONYMOUS
+#define MAP_DENYWRITE     0 /* ignored */
+#define MAP_EXECUTABLE    0 /* ignored */
+#define MAP_FILE          0 /* ignored */
+#define MAP_FIXED         0x10
+#define MAP_GROWSDOWN     0x0100
+#define MAP_HUGETLB       0x40000
+#define MAP_LOCKED        0x2000
+#define MAP_NONBLOCK      0x10000
+#define MAP_NORESERVE     0x4000
+#define MAP_POPULATE      0x8000
+#define MAP_STACK         0x20000
+#define MAP_UNINITIALIZED 0x4000000
+
+static void * __attribute__((unused))
+mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+	void *ret;
+
+	register uint64_t __flags  asm("r10") = (uint64_t)flags;
+	register uint64_t __fd     asm("r8" ) = (uint64_t)fd;
+	register uint64_t __offset asm("r9" ) = (uint64_t)offset;
+	asm volatile ("movq $9, %%rax \n\t"
+		"syscall"
+		: "=a" (ret)
+		: "D" (addr), "S" (length), "d" (prot), "r" (__flags),
+		  "r" (__fd), "r" (__offset)
+		: "%rcx", "%r11", "cc", "memory");
+
+	if ((ssize_t)ret >= 0)
+		return ret;
+
+	errno = -(ssize_t)ret;
+	return (void *)-1;
+}
+
+static int __attribute__((unused))
+munmap(void *addr, size_t length)
+{
+	int ret;
+
+	SYSCALL2(__NR_munmap, addr, length, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+/* sys/resource.h */
+
+#define PRIO_PROCESS (0)
+#define PRIO_PGRP    (1)
+#define PRIO_USER    (2)
+
+#define PRIO_MIN (-20)
+#define PRIO_MAX ( 20)
+
+static int __attribute__((unused))
+getpriority(int which, int who)
+{
+	int ret;
+
+	SYSCALL2(__NR_getpriority, which, who, ret)
+
+	/* returns 40..1 instead of -20..19 to avoid neg. return values */
+	if (ret >= 1)
+		return -ret + 20;
+
+	errno = -ret;
+	/* bogus return value, caller needs to check errno */
+	return -1;
+}
+
+static int __attribute__((unused))
+setpriority(int which, int who, int prio)
+{
+	int ret;
+
+	SYSCALL3(__NR_setpriority, which, who, prio, ret)
+
+	if (ret >= 0)
+		return 0;
 
 	errno = -ret;
 	return -1;
@@ -671,6 +1224,63 @@ fchmod(int fd, mode_t mode)
 	int ret;
 
 	SYSCALL2(__NR_fchmod, fd, mode, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static int __attribute__((unused))
+mkdir(const char *pathname, mode_t mode)
+{
+	int ret;
+
+	SYSCALL2(__NR_mkdir, pathname, mode, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static mode_t __attribute__((unused))
+umask(mode_t mask)
+{
+	mode_t ret;
+
+	SYSCALL1(__NR_umask, mask, ret)
+
+	return ret;
+}
+
+/* sys/sysinfo.h */
+
+struct sysinfo {
+	long uptime;
+	unsigned long loads[3];
+	unsigned long totalram;
+	unsigned long freeram;
+	unsigned long sharedram;
+	unsigned long bufferram;
+	unsigned long totalswap;
+	unsigned long freeswap;
+	unsigned short procs;
+	unsigned long totalhigh;
+	unsigned long freehigh;
+	unsigned int mem_unit;
+	/* padding is zero on x86_64 */
+	/*char _f[20-2*sizeof(long)-sizeof(int)];*/
+};
+
+static int __attribute__((unused))
+sysinfo(struct sysinfo *info)
+{
+	int ret;
+
+	SYSCALL1(__NR_sysinfo, info, ret)
 
 	if (ret >= 0)
 		return 0;
