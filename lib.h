@@ -51,6 +51,13 @@ isdigit(int c)
 }
 
 static int __attribute__((unused))
+isspace(int c)
+{
+	return (c == ' ') || (c == '\f') || (c == '\n') || (c == '\r')
+	       || (c == '\t') || (c == '\v');
+}
+
+static int __attribute__((unused))
 isxdigit(int c)
 {
 	return (c >= '0' && c <= '9')
@@ -78,18 +85,34 @@ putchar(int c)
 
 /* stdlib.h */
 
-/* TODO: handle trailing whitespace(s), +- */
 static int __attribute__((unused))
 atoi(const char *nptr)
 {
 	int ret = 0,
-	    weight = 1,
-	    off = 0;
+	    weight = 1;
+	size_t off = 0;
 
+	/* falls through, if *nptr == '\0' */
+
+	/* eat whitespaces */
+	while (isspace(*nptr))
+		++nptr;
+
+	/* handle single (optional) +/- */
+	if (*nptr == '+')
+		++nptr;
+	if (*nptr == '-') {
+		weight = -1;
+		++nptr;
+	}
+
+	/* find end of integer */
 	while (isdigit(*nptr)) {
 		++off;
 		++nptr;
 	}
+
+	/* convert string to integer (base 10) */
 	while (off--) {
 	       ret += weight * (*--nptr-'0');
 	       weight *= 10;
@@ -111,7 +134,7 @@ strchr(const char *s, int c)
 		++s;
 	}
 
-	if (c != '\0') {
+	if (ch != '\0') {
 		return NULL;
 	} else {
 		return (char *)s;
@@ -125,8 +148,7 @@ strrchr(const char *s, int c)
 	size_t len = strlen(s);
 
 	/* include NULL byte in search */
-	s += len;
-	++len;
+	s += len++;
 	while (len--) {
 		if (*s == ch)
 			return (char *)s;
@@ -171,6 +193,31 @@ strlen(const char *s)
 		++len;
 
 	return len;
+}
+
+/* unistd.h */
+
+static int __attribute__((unused))
+nice(int inc)
+{
+	pid_t pid = getpid();
+
+	if (setpriority(PRIO_PROCESS, pid, inc) < 0) {
+		if (errno = EACCES)
+			errno = EPERM;
+		return -1;
+	}
+
+	int ret;
+
+	errno = 0;
+
+	if ((ret = getpriority(PRIO_PROCESS, pid)) == -1) {
+		if (errno != 0)
+			return -1;
+	}
+
+	return ret;
 }
 
 /* misc */

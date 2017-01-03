@@ -63,7 +63,7 @@ do { \
 
 /* environment variables (defined in start_x86_64.s) */
 
-extern const char **environ;
+extern char * const *environ;
 
 /* prototypes for functions defined in lib.h */
 
@@ -399,7 +399,7 @@ _exit(int status)
 static char * __attribute__((unused))
 getenv(const char *name)
 {
-	const char **env = environ;
+	char * const *env = environ;
 
 	if (env == NULL)
 		return NULL;
@@ -1155,7 +1155,7 @@ munmap(void *addr, size_t length)
 #define PRIO_USER    (2)
 
 #define PRIO_MIN (-20)
-#define PRIO_MAX ( 20)
+#define PRIO_MAX ( 19)
 
 static int __attribute__((unused))
 getpriority(int which, int who)
@@ -1310,6 +1310,44 @@ uname(struct utsname *buf)
 
 	if (ret >= 0)
 		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+/* misc */
+
+#define __SYSLOG_ACTION_CLOSE          0
+#define __SYSLOG_ACTION_OPEN           1
+#define __ SYSLOG_ACTION_READ          2
+#define __SYSLOG_ACTION_READ_ALL       3
+#define __SYSLOG_ACTION_READ_CLEAR     4
+#define __SYSLOG_ACTION_CLEAR          5
+#define __SYSLOG_ACTION_CONSOLE_OFF    6
+#define __SYSLOG_ACTION_CONSOLE_ON     7
+#define __SYSLOG_ACTION_CONSOLE_LEVEL  8
+#define __SYSLOG_ACTION_SIZE_UNREAD    9
+#define __SYSLOG_ACTION_SIZE_BUFFER   10
+
+static int __attribute__((unused))
+__syslog(int type, char *bufp, int len)
+{
+	int ret;
+
+	SYSCALL3(__NR_syslog, type, bufp, len, ret)
+
+	switch (type) {
+	case  2:
+	case  3:
+	case  4:
+	case  9:
+	case 10:
+		if (ret >= 0)
+			return ret;
+	default:
+		if (ret >= 0)
+			return 0;
+	}
 
 	errno = -ret;
 	return -1;
