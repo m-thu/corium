@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
 		die();
 
 	if (argc > 2) {
-		execve(argv[2], argv+2, NULL);
+		execvp(argv[2], argv+2);
 	} else {
-		execve("/bin/sh", shell, NULL);
+		execvp("/bin/sh", shell);
 	}
 
 	die();

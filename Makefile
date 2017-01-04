@@ -3,7 +3,7 @@ ARCH ?= $(shell uname -m)
 ifeq ($(ARCH),x86_64)
 UTILS = true false yes clear echo printenv pwd uname arch \
 	hostname sleep chvt reset basename chroot domainname \
-	__reboot __poweroff dirname mesg sync nice
+	__reboot __poweroff dirname mesg sync nice renice
 CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe \
 	 -fno-unwind-tables -fno-asynchronous-unwind-tables \
 	 -Wno-unused-function
