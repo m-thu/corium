@@ -1319,7 +1319,7 @@ uname(struct utsname *buf)
 
 #define __SYSLOG_ACTION_CLOSE          0
 #define __SYSLOG_ACTION_OPEN           1
-#define __ SYSLOG_ACTION_READ          2
+#define __SYSLOG_ACTION_READ           2
 #define __SYSLOG_ACTION_READ_ALL       3
 #define __SYSLOG_ACTION_READ_CLEAR     4
 #define __SYSLOG_ACTION_CLEAR          5

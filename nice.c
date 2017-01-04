@@ -1,10 +1,10 @@
 /*
  * Invocation: nice [-n NICEVALUE] COMMAND [ARGS ...]
  *
- * Run COMMAND with priority -20 <= NICEVALUE <= 19
+ * Run COMMAND with NICEVALUE added to priority.
  *
  * Options:
- *   -n : priority (default: 10)
+ *   -n : nice increment (default: 10)
  *
  * Return value:
  *   1: failure
@@ -13,11 +13,9 @@
 
 #include "lib.h"
 
-#define DEFAULT_NICE_VALUE 10
-
 int main(int argc, char *argv[])
 {
-	int prio = DEFAULT_NICE_VALUE;
+	int prio = 10;
 
 	if (argc == 1)
 		return EXIT_FAILURE;
@@ -28,10 +26,6 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 
 		prio = atoi(argv[2]);
-
-		if (prio < PRIO_MIN || prio > PRIO_MAX)
-			return EXIT_FAILURE;
-
 		argv += 2;
 	}
 
@@ -45,7 +39,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (execve(*argv, argv, environ) < 0)
+	if (execvp(*argv, argv) < 0)
 		return EXIT_FAILURE;
 
 	/* suppress compiler warning */

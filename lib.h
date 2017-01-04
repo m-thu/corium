@@ -51,6 +51,14 @@ isdigit(int c)
 }
 
 static int __attribute__((unused))
+isprint(int c)
+{
+	c &= 0x1f;
+
+	return c >= 32 && c < 127;
+}
+
+static int __attribute__((unused))
 isspace(int c)
 {
 	return (c == ' ') || (c == '\f') || (c == '\n') || (c == '\r')
@@ -88,40 +96,44 @@ putchar(int c)
 static int __attribute__((unused))
 atoi(const char *nptr)
 {
-	int ret = 0,
-	    weight = 1;
-	size_t off = 0;
+	int64_t ret = 0;
+	bool neg = false;
 
 	/* falls through, if *nptr == '\0' */
 
 	/* eat whitespaces */
-	while (isspace(*nptr))
+	while (isspace((unsigned char)*nptr))
 		++nptr;
 
 	/* handle single (optional) +/- */
 	if (*nptr == '+')
 		++nptr;
 	if (*nptr == '-') {
-		weight = -1;
-		++nptr;
-	}
-
-	/* find end of integer */
-	while (isdigit(*nptr)) {
-		++off;
+		neg = true;
 		++nptr;
 	}
 
 	/* convert string to integer (base 10) */
-	while (off--) {
-	       ret += weight * (*--nptr-'0');
-	       weight *= 10;
-	}
+	while (isdigit((unsigned char)*nptr))
+		ret = ret*10 + (*nptr++ - '0');
 
-	return ret;
+	return neg ? -ret : ret;
 }
 
 /* string.h */
+
+static void * __attribute__((unused))
+memcpy(void *dest, const void *src, size_t n)
+{
+	void *ret = dest;
+	const uint8_t *__src  = src;
+	uint8_t       *__dest = dest;
+
+	while (n--)
+		*__dest++ = *__src++;
+
+	return ret;
+}
 
 static char * __attribute__((unused))
 strchr(const char *s, int c)
@@ -197,22 +209,102 @@ strlen(const char *s)
 
 /* unistd.h */
 
+#define PATH_MAX 4096
+
+static int __attribute__((unused))
+execvp(const char *file, char *const argv[])
+{
+	const char *default_path = "/bin:/usr/bin";
+
+	/* if file contains '/' treat as absolute filename */
+	if (strchr(file, '/')) {
+		execve(file, argv, environ);
+
+		/* if execve fails, try executing with shell */
+		if (errno == ENOEXEC) {
+			char * const shell[] = {"/bin/sh", "/bin/sh", (char *)file, NULL};
+			execve(shell[0], shell, environ);
+		}
+	} else {
+		char cmd[PATH_MAX];
+		const char *path = getenv("PATH");
+		const char *start, *end;
+
+		/* if environment variable isn't set, use default path */
+		if (path == NULL)
+			path = default_path;
+
+		/* search path for executable */
+		start = path;
+		for (;;) {
+			if ((end = strchr(start, ':')) == NULL)
+				end = strchr(start, '\0');
+
+			/* max. length: strlen(path) + '/' + strlen(file)
+			   + '\0' */
+			if ((end-start + 1 + strlen(file) + 1) > PATH_MAX) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			memcpy(cmd, start, (size_t)(end-start));
+			cmd[end-start] = '/';
+			memcpy(cmd + (size_t)(end-start) + 1, file, strlen(file));
+			cmd[end-start+1+strlen(file)] = '\0';
+
+			execve(cmd, argv, environ);
+
+			/* if execve fails, try executing with shell */
+			if (errno == ENOEXEC) {
+				char * const shell[] = {"/bin/sh", "/bin/sh", (char *)cmd, NULL};
+				execve(shell[0], shell, environ);
+
+				/* no further search if execution fails */
+				return -1;
+			}
+
+			/* no more directories in path, search failed */
+			if (*end == '\0')
+				break;
+			start = end + 1;
+
+			/* if permission is denied or file doesn't exist, try next dir in path */
+			if (errno == EACCES || errno == ENOENT || errno == ENOTDIR)
+				continue;
+
+			/* execution failed */
+			break;
+		}
+	}
+
+	return -1;
+}
+
 static int __attribute__((unused))
 nice(int inc)
 {
-	pid_t pid = getpid();
+	int prio, ret;
 
-	if (setpriority(PRIO_PROCESS, pid, inc) < 0) {
-		if (errno = EACCES)
+	errno = 0;
+
+	if ((ret = getpriority(PRIO_PROCESS, 0)) == -1) {
+		if (errno != 0)
+			return -1;
+	}
+
+	prio = ret + inc;
+	if (prio > PRIO_MAX)
+		prio = PRIO_MAX;
+	if (prio < PRIO_MIN)
+		prio = PRIO_MIN;
+
+	if (setpriority(PRIO_PROCESS, 0, prio) < 0) {
+		if (errno == EACCES)
 			errno = EPERM;
 		return -1;
 	}
 
-	int ret;
-
-	errno = 0;
-
-	if ((ret = getpriority(PRIO_PROCESS, pid)) == -1) {
+	if ((ret = getpriority(PRIO_PROCESS, 0)) == -1) {
 		if (errno != 0)
 			return -1;
 	}
