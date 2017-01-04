@@ -211,20 +211,49 @@ strlen(const char *s)
 
 #define PATH_MAX 4096
 
+static void __attribute__((unused))
+__shell(const char *file, char *const argv[])
+{
+	char *default_shell = "/bin/sh";
+
+	/* count number of arguments and allocate memory
+	   on stack */
+	size_t argc = 0;
+	char **arg = (char **)argv;
+
+	while (*arg++)
+		++argc;
+
+	char *shell_argv[argc + 2];
+
+	shell_argv[0] = default_shell;
+	shell_argv[1] = (char *)file;
+	shell_argv[2] = NULL;
+
+	/* handle additional arguments */
+	if (argc > 1) {
+		size_t i;
+
+		for (i = 1; i < argc; ++i)
+			shell_argv[1+i] = argv[i];
+		shell_argv[i] = NULL;
+	}
+
+	execve(shell_argv[0], shell_argv, environ);
+}
+
 static int __attribute__((unused))
 execvp(const char *file, char *const argv[])
 {
-	const char *default_path = "/bin:/usr/bin";
+	const char *default_path  = "/bin:/usr/bin";
 
 	/* if file contains '/' treat as absolute filename */
 	if (strchr(file, '/')) {
 		execve(file, argv, environ);
 
 		/* if execve fails, try executing with shell */
-		if (errno == ENOEXEC) {
-			char * const shell[] = {"/bin/sh", "/bin/sh", (char *)file, NULL};
-			execve(shell[0], shell, environ);
-		}
+		if (errno == ENOEXEC)
+			__shell(file, argv);
 	} else {
 		char cmd[PATH_MAX];
 		const char *path = getenv("PATH");
@@ -256,8 +285,7 @@ execvp(const char *file, char *const argv[])
 
 			/* if execve fails, try executing with shell */
 			if (errno == ENOEXEC) {
-				char * const shell[] = {"/bin/sh", "/bin/sh", (char *)cmd, NULL};
-				execve(shell[0], shell, environ);
+				__shell(cmd, argv);
 
 				/* no further search if execution fails */
 				return -1;
