@@ -53,7 +53,7 @@ isdigit(int c)
 static int __attribute__((unused))
 isprint(int c)
 {
-	c &= 0x1f;
+	c &= 0x7f;
 
 	return c >= 32 && c < 127;
 }

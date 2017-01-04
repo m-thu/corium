@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 		} else {
 			return EXIT_SUCCESS;
 		}
-	}	
+	}
 
 	bool clear_after_read = false,
 	     print_raw        = false;
