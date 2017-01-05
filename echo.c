@@ -1,5 +1,5 @@
 /*
- * Invocation: echo [OPTION] [STRING] [...]
+ * Invocation: echo [OPTION ...] [STRING] [...]
  *
  * Print string(s)
  *
@@ -48,20 +48,29 @@ int main(int argc, char *argv[])
 
 	/* parse options */
 	while (*++argv) {
-		if ((*argv)[0] != '-')
-			break;
-		if ((*argv)[1] == '\0')
+		if (**argv != '-' || (*argv)[1] == '\0')
+			/* not an option */
 			break;
 
-		if ((*argv)[1] == 'n' && (*argv)[2] == '\0') {
-			opt_n = true;
-		} else if ((*argv)[1] == 'e' && (*argv)[2] == '\0') {
-			opt_e = true;
-		} else {
-			break;
+		char *tmp = *argv;
+
+		while (*++*argv) {
+			switch (**argv) {
+			case 'n':
+				opt_n = true;
+				break;
+			case 'e':
+				opt_e = true;
+				break;
+			default:
+				/* invalid option, bail out */
+				*argv = tmp;
+				goto bailout;
+			}
 		}
 	}
 
+bailout:
 	while (*argv) {
 		if (__unlikely(first)) {
 			first = false;

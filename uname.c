@@ -1,5 +1,5 @@
 /*
- * Invocation: uname [OPTION]
+ * Invocation: uname [OPTION ...]
  *
  * Print system info to stdout
  *
@@ -56,42 +56,35 @@ int main(int argc, char *argv[])
 		/* Skip invalid arguments */
 		if (argv[i][0] != '-')
 			continue;
-		/* Skip incomplete options */
-		if (argv[i][1] == '\0')
-			continue;
 
-		switch (argv[i][1]) {
-		case 'a':
-			opt |= OPT_S|OPT_N|OPT_R|OPT_V|OPT_M|OPT_P;
-			break;
+		while (*++argv[i]) {
+			switch (*argv[i]) {
+			case 'a':
+				opt |= OPT_S|OPT_N|OPT_R|OPT_V|OPT_M|OPT_P;
+				break;
+			case 's':
+				opt |= OPT_S;
+				break;
+			case 'n':
+				opt |= OPT_N;
+				break;
+			case 'r':
+				opt |= OPT_R;
+				break;
+			case 'v':
+				opt |= OPT_V;
+				break;
+			case 'm':
+				opt |= OPT_M;
+				break;
+			case 'p':
+				opt |= OPT_P;
+				break;
 
-		case 's':
-			opt |= OPT_S;
-			break;
-
-		case 'n':
-			opt |= OPT_N;
-			break;
-
-		case 'r':
-			opt |= OPT_R;
-			break;
-
-		case 'v':
-			opt |= OPT_V;
-			break;
-
-		case 'm':
-			opt |= OPT_M;
-			break;
-
-		case 'p':
-			opt |= OPT_P;
-			break;
-
-		/* Ignore unknown options */
-		default:
-			break;
+			/* Ignore unknown options */
+			default:
+				break;
+			}
 		}
 	}
 
