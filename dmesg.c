@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* print buffer */
-	char buf[BUFSIZE], *out = buf, *tmp;
+	char buf[BUFSIZE+1], *out = buf, *tmp;
 	int len;
 
 	len = __syslog(__SYSLOG_ACTION_READ_ALL, buf, BUFSIZE);
@@ -97,6 +97,9 @@ int main(int argc, char *argv[])
 			len -= ret;
 		}
 	} else {
+		/* zero terminate buffer, so we can safely use strchr */
+		buf[len] = '\0';
+
 		/* strip loglevel "<n>", skip incomplete lines */
 		while (len) {
 			/* find start of line */
