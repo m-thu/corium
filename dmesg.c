@@ -28,7 +28,8 @@
 #include "lib.h"
 
 /* buffer size used to query kernel ring buffer */
-#define BUFSIZE 16392
+//#define BUFSIZE 16392
+#define BUFSIZE 32*1024
 
 static void clear_buffer(void);
 
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* print buffer */
-	char buf[BUFSIZE], *out = buf;
+	char buf[BUFSIZE], *out = buf, *tmp;
 	int len;
 
 	len = __syslog(__SYSLOG_ACTION_READ_ALL, buf, BUFSIZE);
@@ -96,7 +97,38 @@ int main(int argc, char *argv[])
 			len -= ret;
 		}
 	} else {
-		/* strip loglevel: "<n>" */
+		/* strip loglevel "<n>", skip incomplete lines */
+		while (len) {
+			/* find start of line */
+			if (*out != '<') {
+				++out;
+				--len;
+				continue;
+			}
+
+			/* find matching '>' */
+			if ((tmp = strchr(out, '>')) == NULL) {
+				/* end of buffer with incomplete line reached,
+				   exit */
+				break;
+			}
+
+			/* exit if '>' is last character in buffer */
+			if ((len -= ++tmp - out) <= 0)
+				break;
+			out = tmp;
+
+			/* find end of line */
+			if ((tmp = strchr(out, '\n')) == NULL) {
+				/* end of buffer with incomplete line reached,
+				   exit */
+				break;
+			}
+			len -= ++tmp - out;
+
+			write(1, out, tmp - out);
+			out = tmp;
+		}
 	}
 
 	if (clear_after_read)
