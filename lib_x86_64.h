@@ -10,54 +10,36 @@
 
 #include "syscalls_x86_64.h"
 
-/* syscall numbers are defined as macros,
-   so the argument "nr" to SYSCALLxx has to be
-   expanded before stringification */
-
 #define SYSCALL0(nr, retval) \
-	__SYSCALL0(nr, retval)
-#define __SYSCALL0(nr, retval) \
-asm volatile ("movq $"#nr", %%rax \n\t" \
-	"syscall" \
-	:  "=a" ((retval)) \
-	:: "%rcx", "%r11", "cc", "memory");
+asm volatile ("syscall" \
+	: "=a" (retval) \
+	: "0" (nr) \
+	: "%rcx", "%r11", "cc", "memory");
 
 #define SYSCALL1(nr, param1, retval) \
-	__SYSCALL1(nr, param1, retval)
-#define __SYSCALL1(nr, param1, retval) \
-asm volatile ("movq $"#nr", %%rax \n\t" \
-	"syscall" \
-	: "=a" ((retval)) \
-	: "D" ((param1)) \
+asm volatile ("syscall" \
+	: "=a" (retval) \
+	: "0" (nr), "D" (param1) \
 	: "%rcx", "%r11", "cc", "memory");
 
 #define SYSCALL2(nr, param1, param2, retval) \
-	__SYSCALL2(nr, param1, param2, retval)
-#define __SYSCALL2(nr, param1, param2, retval) \
-asm volatile ("movq $"#nr", %%rax \n\t" \
-	"syscall" \
-	: "=a" ((retval)) \
-	: "D" ((param1)), "S" ((param2)) \
+asm volatile ("syscall" \
+	: "=a" (retval) \
+	: "0" (nr), "D" (param1), "S" (param2) \
 	: "%rcx", "%r11", "cc", "memory");
 
 #define SYSCALL3(nr, param1, param2, param3, retval) \
-	__SYSCALL3(nr, param1, param2, param3, retval)
-#define __SYSCALL3(nr, param1, param2, param3, retval) \
-asm volatile ("movq $"#nr", %%rax \n\t" \
-	"syscall" \
-	: "=a" ((retval)) \
-	: "D" ((param1)), "S" ((param2)), "d" ((param3)) \
+asm volatile ("syscall" \
+	: "=a" (retval) \
+	: "0" (nr), "D" (param1), "S" (param2), "d" (param3) \
 	: "%rcx", "%r11", "cc", "memory");
 
 #define SYSCALL4(nr, param1, param2, param3, param4, retval) \
-	__SYSCALL4(nr, param1, param2, param3, param4, retval)
-#define __SYSCALL4(nr, param1, param2, param3, param4, retval) \
 do { \
 	register uint64_t p4 asm("r10") = (uint64_t)(param4); \
-	asm volatile ("movq $"#nr", %%rax \n\t" \
-		"syscall" \
-		: "=a" ((ret)) \
-		: "D" ((param1)), "S" ((param2)), "d" ((param3)), "r" ((p4)) \
+	asm volatile ("syscall" \
+		: "=a" (ret) \
+		: "0" (nr), "D" (param1), "S" (param2), "d" (param3), "r" (p4) \
 		: "%rcx", "%r11", "cc", "memory"); \
 } while (0);
 
@@ -825,7 +807,7 @@ pipe2(int pipefd[2], int flags)
 {
 	int ret;
 
-	SYSCALL2(__NR_pip2, pipefd, flags, ret)
+	SYSCALL2(__NR_pipe2, pipefd, flags, ret)
 
 	if (ret >= 0)
 		return 0;
