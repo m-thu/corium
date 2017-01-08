@@ -1,5 +1,5 @@
 /*
- * Invocation: rmdir [OPTION/--] DIRECTORY [...]
+ * Invocation: rmdir [OPTION] DIRECTORY [...]
  *
  * Remove empty DIRECTORY.
  *
@@ -42,7 +42,28 @@ int main(int argc, char *argv[])
 				error = EXIT_FAILURE;
 			}
 		} else {
-			char *tmp;
+			while (**argv) {
+				char *tmp = strrchr(*argv, '/');
+
+				/* if '/' is the last character, remove it */
+				if (tmp && tmp[1] == '\0') {
+					*tmp = '\0';
+					continue;
+				}
+
+				if (rmdir(*argv) < 0) {
+					write_stderr("error removing '");
+					write_stderr(*argv);
+					write(1, "'\n", 2);
+					error = EXIT_FAILURE;
+				}
+
+				if (tmp) {
+					*tmp = '\0';
+				} else {
+					**argv = '\0';
+				}
+			}
 		}
 	
 		++argv;
