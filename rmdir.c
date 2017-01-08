@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 				if (tmp) {
 					*tmp = '\0';
 				} else {
-					**argv = '\0';
+					break;
 				}
 			}
 		}
