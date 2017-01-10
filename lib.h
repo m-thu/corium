@@ -31,6 +31,8 @@
 #define EXIT_FAILURE 1
 #endif
 
+#ifndef __dos__
+
 /* prototypes for functions in this header file */
 
 static size_t __attribute__((unused)) strlen(const char *);
@@ -133,6 +135,18 @@ memcpy(void *dest, const void *src, size_t n)
 		*__dest++ = *__src++;
 
 	return ret;
+}
+
+static void * __attribute__((unused))
+memset(void *s, int c, size_t n)
+{
+	void *retval = s;
+	uint8_t *p = s;
+
+	while (n--)
+		*p++ = c;
+
+	return retval;
 }
 
 static char * __attribute__((unused))
@@ -353,5 +367,8 @@ write_stderr(const char *s)
 {
 	write(2, s, strlen(s));
 }
+
+/* ifndef __dos__ */
+#endif
 
 #endif

@@ -72,6 +72,7 @@ typedef signed long   blkcnt_t;
 typedef signed long   time_t;
 typedef int64_t       ssize_t;
 typedef int32_t       pid_t;
+typedef signed long   intptr_t;
 
 /* typedefs from termios.h */
 
@@ -421,6 +422,47 @@ nanosleep(const struct timespec *req, struct timespec *rem)
 }
 
 /* unistd.h */
+
+/* XXX HACK */
+static int __attribute__((unused))
+brk(void *addr)
+{
+	void *oldbrk, *ret;
+
+	SYSCALL1(__NR_brk, 0, oldbrk)
+	SYSCALL1(__NR_brk, addr, ret)
+
+	if (ret != oldbrk)
+		return 0;
+
+	errno = -ENOMEM;
+	return -1;
+}
+
+/* XXX HACK */
+static void * __attribute__((unused))
+sbrk(intptr_t increment)
+{
+	void *oldbrk, *ret;
+	uint8_t *newbrk;
+
+	SYSCALL1(__NR_brk, 0, oldbrk)
+
+	/* no increment: return current break */
+	if (increment == 0)
+		return oldbrk;
+
+	newbrk = oldbrk;
+	newbrk += increment;
+	SYSCALL1(__NR_brk, newbrk, ret)
+
+	/* return old break on success */
+	if (ret != oldbrk)
+		return oldbrk;
+
+	errno = -ENOMEM;
+	return (void *)-1;
+}
 
 static int __attribute__((unused))
 chdir(const char *path)
@@ -1046,6 +1088,19 @@ write(int fd, const void *buf, size_t count)
 	return -1;
 }
 
+/* sched.h */
+
+static int __attribute__((unused))
+sched_yield(void)
+{
+	size_t ret;
+
+	SYSCALL0(__NR_sched_yield, ret);
+
+	/* always succeeds on Linux */
+	return 0;
+}
+
 /* sys/ioctl.h */
 
 static int __attribute__((unused))
@@ -1266,6 +1321,41 @@ sysinfo(struct sysinfo *info)
 
 	if (ret >= 0)
 		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+/* sys/uio.h */
+
+struct iovec {
+	void  *iov_base;
+	size_t iov_len;
+};
+
+static ssize_t __attribute__((unused))
+readv(int fd, const struct iovec *iov, int iovcnt)
+{
+	ssize_t ret;
+
+	SYSCALL3(__NR_readv, fd, iov, iovcnt, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static ssize_t __attribute__((unused))
+writev(int fd, const struct iovec *iov, int iovcnt)
+{
+	ssize_t ret;
+
+	SYSCALL3(__NR_writev, fd, iov, iovcnt, ret)
+
+	if (ret >= 0)
+		return ret;
 
 	errno = -ret;
 	return -1;
