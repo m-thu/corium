@@ -43,6 +43,17 @@ do { \
 		: "%rcx", "%r11", "cc", "memory"); \
 } while (0);
 
+#define SYSCALL5(nr, param1, param2, param3, param4, param5, retval) \
+do { \
+	register uint64_t p4 asm("r10") = (uint64_t)(param4); \
+	register uint64_t p5 asm("r8" ) = (uint64_t)(param5); \
+	asm volatile ("syscall" \
+		: "=a" (ret) \
+		: "0" (nr), "D" (param1), "S" (param2), "d" (param3), "r" (p4),\
+		  "r" (p5) \
+		: "%rcx", "%r11", "cc", "memory"); \
+} while (0);
+
 /* environment variables (defined in start_x86_64.s) */
 
 extern char * const *environ;
@@ -73,6 +84,7 @@ typedef signed long   time_t;
 typedef int64_t       ssize_t;
 typedef int32_t       pid_t;
 typedef signed long   intptr_t;
+typedef signed long   clock_t;
 
 /* typedefs from termios.h */
 
@@ -435,7 +447,7 @@ brk(void *addr)
 	if (ret != oldbrk)
 		return 0;
 
-	errno = -ENOMEM;
+	errno = ENOMEM;
 	return -1;
 }
 
@@ -460,7 +472,7 @@ sbrk(intptr_t increment)
 	if (ret != oldbrk)
 		return oldbrk;
 
-	errno = -ENOMEM;
+	errno = ENOMEM;
 	return (void *)-1;
 }
 
@@ -1101,6 +1113,238 @@ sched_yield(void)
 	return 0;
 }
 
+/* signal.h */
+// XXX: HACK
+
+typedef int sig_atomic_t;
+typedef void (*sighandler_t)(int);
+
+/* fake signal handlers */
+#define SIG_ERR ((sighandler_t) -1L)
+#define SIG_DFL ((sighandler_t)  0L)
+#define SIG_IGN ((sighandler_t)  1L)
+
+/* list of signals */
+#define SIGHUP     1
+#define SIGINT     2
+#define SIGQUIT    3
+#define SIGILL     4
+#define SIGTRAP    5
+#define SIGABRT    6
+#define SIGIOT     6
+#define SIGBUS     7
+#define SIGFPE     8
+#define SIGKILL    9
+#define SIGUSR1   10
+#define SIGSEGV   11
+#define SIGUSR2   12
+#define SIGPIPE   13
+#define SIGALRM   14
+#define SIGTERM   15
+#define SIGSTKFLT 16
+#define SIGCLD    SIGCHLD
+#define SIGCHLD   17
+#define SIGCONT   18
+#define SIGSTOP   19
+#define SIGTSTP   20
+#define SIGTTIN   21
+#define SIGTTOU   22
+#define SIGURG    23
+#define SIGXCPU   24
+#define SIGXFSZ   25
+#define SIGVTALRM 26
+#define SIGPROF   27
+#define SIGWINCH  28
+#define SIGPOLL   SIGIO
+#define SIGIO     29
+#define SIGPWR    30
+#define SIGSYS    31
+
+#define _NSIG     65
+
+/* flags */
+#define SA_RESTORER   0x04000000
+#define SA_ONSTACK    0x08000000
+#define SA_RESTART    0x10000000
+#define SA_INTERRUPT  0x20000000
+#define SA_NODEFER    0x40000000
+#define SA_RESETHAND  0x80000000
+
+// DEFINITIONS AND CODE FROM MUSL
+//
+// LICENSE:
+// ----------------------------------------------------------------------
+// Copyright © 2005-2014 Rich Felker, et al.
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//----------------------------------------------------------------------
+
+union sigval {
+	int sival_int;
+	void *sival_ptr;
+};
+
+typedef struct {
+	unsigned long __bits[128/sizeof(long)];
+} sigset_t;
+
+typedef struct {
+	int si_signo, si_errno, si_code;
+
+	union {
+		char __pad[128 - 2*sizeof(int) - sizeof(long)];
+		struct {
+			union {
+				struct {
+					pid_t si_pid;
+					uid_t si_uid;
+				} __piduid;
+				struct {
+					int si_timerid;
+					int si_overrun;
+				} __timer;
+			} __first;
+			union {
+				union sigval si_value;
+				struct {
+					int si_status;
+					clock_t si_utime, si_stime;
+				} __sigchld;
+			} __second;
+		} __si_common;
+		struct {
+			void *si_addr;
+			short si_addr_lsb;
+			union {
+				struct {
+					void *si_lower;
+					void *si_upper;
+				} __addr_bnd;
+				unsigned si_pkey;
+			} __first;
+		} __sigfault;
+		struct {
+			long si_band;
+			int si_fd;
+		} __sigpoll;
+		struct {
+			void *si_call_addr;
+			int si_syscall;
+			unsigned si_arch;
+		} __sigsys;
+	} __si_fields;
+} siginfo_t;
+#define si_pid     __si_fields.__si_common.__first.__piduid.si_pid
+#define si_uid     __si_fields.__si_common.__first.__piduid.si_uid
+#define si_status  __si_fields.__si_common.__second.__sigchld.si_status
+#define si_utime   __si_fields.__si_common.__second.__sigchld.si_utime
+#define si_stime   __si_fields.__si_common.__second.__sigchld.si_stime
+#define si_value   __si_fields.__si_common.__second.si_value
+#define si_addr    __si_fields.__sigfault.si_addr
+#define si_addr_lsb __si_fields.__sigfault.si_addr_lsb
+#define si_lower   __si_fields.__sigfault.__first.__addr_bnd.si_lower
+#define si_upper   __si_fields.__sigfault.__first.__addr_bnd.si_upper
+#define si_pkey    __si_fields.__sigfault.__first.si_pkey
+#define si_band    __si_fields.__sigpoll.si_band
+#define si_fd      __si_fields.__sigpoll.si_fd
+#define si_timerid __si_fields.__si_common.__first.__timer.si_timerid
+#define si_overrun __si_fields.__si_common.__first.__timer.si_overrun
+#define si_ptr     si_value.sival_ptr
+#define si_int     si_value.sival_int
+#define si_call_addr __si_fields.__sigsys.si_call_addr
+#define si_syscall __si_fields.__sigsys.si_syscall
+#define si_arch    __si_fields.__sigsys.si_arch
+
+struct sigaction {
+	union {
+		void (*sa_handler)(int);
+		void (*sa_sigaction)(int, siginfo_t *, void *);
+	} __sa_handler;
+	sigset_t sa_mask;
+	int sa_flags;
+	void (*sa_restorer)(void);	/* obsolete */
+};
+#define sa_handler   __sa_handler.sa_handler
+#define sa_sigaction __sa_handler.sa_sigaction
+
+static int __attribute__((unused))
+sigemptyset(sigset_t *set)
+{
+	set->__bits[0] = 0;
+	if (sizeof(long)==4 || _NSIG > 65) set->__bits[1] = 0;
+	if (sizeof(long)==4 && _NSIG > 65) {
+		set->__bits[2] = 0;
+		set->__bits[3] = 0;
+	}
+	return 0;
+}
+
+static int __attribute__((unused))
+sigaddset(sigset_t *set, int sig)
+{
+	unsigned s = sig-1;
+	if (s >= _NSIG-1 || sig-32U < 3) {
+		errno = EINVAL;
+		return -1;
+	}
+	//set->__bits[s/8/sizeof *set->__bits] |= 1UL<<(s&8*sizeof *set->__bits-1);
+	/* fix -Wparentheses warning */
+	set->__bits[s/8/sizeof *set->__bits] |= 1UL<<((s&8*sizeof *set->__bits)-1);
+	return 0;
+}
+
+//
+// END DEFINITIONS AND CODE FROM MUSL
+//
+
+static int __attribute__((unused))
+sigaction(int signum, const struct sigaction *act,
+          struct sigaction *oldact)
+{
+	int ret;
+
+	// XXX "@sigsetsize: size of sigset_t type" == 128 ??
+	SYSCALL4(__NR_rt_sigaction, signum, act, oldact, 8, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+static sighandler_t __attribute__((unused))
+signal(int signum, sighandler_t handler)
+{
+	struct sigaction sa, sa_old;
+
+	sa.sa_handler = handler;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+
+	if (sigaction(signum, &sa, &sa_old) < 0)
+		return SIG_ERR;
+
+	return sa_old.sa_handler;
+}
+
 /* sys/ioctl.h */
 
 static int __attribute__((unused))
@@ -1386,6 +1630,10 @@ uname(struct utsname *buf)
 	errno = -ret;
 	return -1;
 }
+
+/* sys/wait.h */
+
+//int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 
 /* misc */
 
