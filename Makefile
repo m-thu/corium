@@ -4,7 +4,7 @@ ifeq ($(ARCH),x86_64)
 UTILS = true false yes clear echo printenv pwd uname arch \
 	hostname sleep chvt reset basename chroot domainname \
 	__reboot __poweroff dirname mesg sync nice renice \
-	dmesg rmdir cat cmp nohup
+	dmesg rmdir cat cmp nohup __sh tee
 CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe \
 	 -fno-unwind-tables -fno-asynchronous-unwind-tables \
 	 -Wno-unused-function
@@ -20,8 +20,6 @@ x86_64/%.o : %.c lib.h lib_x86_64.h syscalls_x86_64.h
 x86_64/% : x86_64/%.o start_x86_64.o
 	$(LD) --gc-sections start_x86_64.o $< -o $@
 	$(STRIP) -R .comment $@
-
-start_x86_64.o : start_x86_64.s
 endif
 
 ifeq ($(ARCH),dos)
@@ -41,8 +39,6 @@ dos/%.o : %.c lib.h
 
 dos/%.com : dos/%.o start_dos.o
 	$(LD) --gc-sections -n -m elf_i386 -T dos.ld start_dos.o $< -o $@
-
-start_dos.o : start_dos.s
 endif
 
 dosbox :

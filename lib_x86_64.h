@@ -85,6 +85,12 @@ typedef int64_t       ssize_t;
 typedef int32_t       pid_t;
 typedef signed long   intptr_t;
 typedef signed long   clock_t;
+typedef uint32_t      id_t;
+typedef long          suseconds_t;
+struct timeval {
+	time_t tv_sec;
+	suseconds_t tv_usec;
+};
 
 /* typedefs from termios.h */
 
@@ -1170,6 +1176,20 @@ typedef void (*sighandler_t)(int);
 #define SA_NODEFER    0x40000000
 #define SA_RESETHAND  0x80000000
 
+static int __attribute__((unused))
+kill(pid_t pid, int sig)
+{
+	int ret;
+
+	SYSCALL2(__NR_kill, pid, sig, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
 // DEFINITIONS AND CODE FROM MUSL
 //
 // LICENSE:
@@ -1438,6 +1458,26 @@ munmap(void *addr, size_t length)
 #define PRIO_MIN (-20)
 #define PRIO_MAX ( 19)
 
+struct rusage {
+	struct timeval ru_utime;
+	struct timeval ru_stime;
+	long   ru_maxrss;
+	long   ru_ixrss;
+	long   ru_idrss;
+	long   ru_isrss;
+	long   ru_minflt;
+	long   ru_majflt;
+	long   ru_nswap;
+	long   ru_inblock;
+	long   ru_oublock;
+	long   ru_msgsnd;
+	long   ru_msgrcv;
+	long   ru_nsignals;
+	long   ru_nvcsw;
+	long   ru_nivcsw;
+	long   __rfu[16];
+};
+
 static int __attribute__((unused))
 getpriority(int which, int who)
 {
@@ -1633,7 +1673,72 @@ uname(struct utsname *buf)
 
 /* sys/wait.h */
 
-//int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+/* specifies which child to wait for */
+typedef enum {
+	P_ALL,
+	P_PID,
+	P_PGID
+} idtype_t;
+
+/* options */
+#define WNOHANG    1
+#define WUNTRACED  2
+#define WSTOPPED   2
+#define WEXITED    4
+#define WCONTINUED 8
+#define WNOWAIT    0x1000000
+
+/* status */
+#define WIFEXITED(status  ) (((status) & 0x7f) == 0)
+#define WEXITSTATUS(status) (((status) & 0xff00) >> 8)
+#define WTERMSIG(status   ) ((status) & 0x7f)
+#define WCOREDUMP(status  ) ((status) & 0x80)
+#define WIFSTOPPED(status ) (((status) & 0xff) == 0x7f)
+#define WSTOPSIG(status   ) WEXITSTATUS(status)
+#define WIFCONTINUED(s    ) ((s) == 0xffff)
+#define WIFSIGNALED(status) (!WIFSTOPPED(status) && !WIFEXITED(status))
+
+/* raw system call */
+static int __attribute__((unused))
+__waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options, struct rusage *r)
+{
+	int ret;
+
+	SYSCALL5(__NR_waitid, idtype, id, infop, options, r, ret)
+
+	if (ret >= 0)
+		return 0;
+
+	errno = -ret;
+	return -1;
+}
+
+/* libc wrapper */
+static inline int __attribute__((unused))
+waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+{
+	return __waitid(idtype, id, infop, options, NULL);
+}
+
+static pid_t __attribute__((unused))
+waitpid(pid_t pid, int *status, int options)
+{
+	pid_t ret;
+
+	SYSCALL4(__NR_wait4, pid, status, options, NULL, ret)
+
+	if (ret >= 0)
+		return ret;
+
+	errno = -ret;
+	return -1;
+}
+
+static inline pid_t __attribute__((unused))
+wait(int *status)
+{
+	return waitpid(-1, status, 0);
+}
 
 /* misc */
 
