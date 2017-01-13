@@ -36,6 +36,7 @@
 /* prototypes for functions in this header file */
 
 static size_t __attribute__((unused)) strlen(const char *);
+static void * __attribute__((unused)) memcpy(void *, const void *, size_t);
 
 /* ctype.h */
 
@@ -120,6 +121,85 @@ atoi(const char *nptr)
 		ret = ret*10 + (*nptr++ - '0');
 
 	return neg ? -ret : ret;
+}
+
+/* removes variable, if '=' is missing */
+static int __attribute__((unused))
+putenv(char *string)
+{
+	/* number of variables in environment including zero terminator */
+	static size_t count = 0;
+	static char **env = NULL;
+	bool remove = (strchr(string, '=') == NULL);
+	int retval = 0;
+
+	/* nothing to do if variable doesn't exist */
+	if (remove && getenv(string) == NULL)
+		goto exit;
+
+	/* if variable already exists, change its value */
+	for (char **e = (char **)environ; !remove && *e; ++e) {
+		char *end = strchr(*e, '=');
+
+		if (strncmp(*e, string, (size_t)(end-*e)) == 0) {
+			*e = string;
+			goto exit;
+		}
+	}
+
+	/* if environment hasn't been reallocated before, calculate its size */
+	if (count == 0) {
+		count = 1; /* zero terminator */
+		for (char **e = (char **)environ; *e; ++e, ++count)
+			;
+	}
+
+	/* reallocate environment */
+	size_t new_count = remove ? count - 1 : count + 1;
+	char **new_env;
+
+	if ((new_env = mmap(NULL, new_count * sizeof(char *),
+		            PROT_READ|PROT_WRITE,
+	                    MAP_PRIVATE|MAP_ANONYMOUS, 0, 0)) == (void *)-1) {
+		retval = 1;
+		errno = ENOMEM;
+		goto exit;
+	}
+
+	if (remove) {
+		/* remove variable */
+		size_t offset = 0;
+		size_t len = strlen(string);
+
+		for (char **e=(char **)environ; strncmp(*e, string, len);
+		     ++e, ++offset)
+			;
+		memcpy(new_env, environ, offset * sizeof(char *));
+		memcpy(new_env + offset, environ + offset + 1,
+		       (count-1-(offset+1)) * sizeof(char *));
+		new_env[count-2] = NULL;
+
+	} else {
+		/* add variable */
+		memcpy(new_env, environ, count * sizeof(char *));
+		new_env[count-1] = string;
+		new_env[count] = NULL;
+	}
+
+	/* free old environment */
+	if (env) {
+		if (munmap(env, count * sizeof(char *)) < 0) {
+			retval = 1;
+			errno = ENOMEM;
+			goto exit;
+		}
+	}
+	env = new_env;
+	environ = new_env;
+	count = new_count;
+
+exit:
+	return retval;
 }
 
 /* string.h */
