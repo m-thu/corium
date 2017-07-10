@@ -5,7 +5,7 @@ UTILS = true false yes clear echo printenv pwd uname arch \
 	hostname sleep chvt reset basename chroot domainname \
 	__reboot __poweroff dirname mesg sync nice renice \
 	dmesg rmdir cat cmp nohup __sh tee env
-CFLAGS = -std=gnu99 -pedantic -Wall -Wextra -Os -pipe \
+CFLAGS = -std=gnu11 -pedantic -Wall -Wextra -Os -pipe \
 	 -fno-unwind-tables -fno-asynchronous-unwind-tables \
 	 -Wno-unused-function
 STRIP = strip

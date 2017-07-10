@@ -146,6 +146,7 @@ static void handle_escape(char *s)
 					}
 					break;
 				}
+				/* fallthru */
 			default:
 				write(1, "\\", 1);
 				write(1, s, 1);

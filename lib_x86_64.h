@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdnoreturn.h>
 
 /* syscalls */
 
@@ -389,12 +390,13 @@ rename(const char *oldpath, const char *newpath)
 
 /* stdlib.h */
 
-static void __attribute__((unused))
+noreturn static void __attribute__((unused))
 _exit(int status)
 {
 	int ret;
 
 	SYSCALL1(__NR_exit, status, ret)
+	__builtin_unreachable();
 }
 
 static char * __attribute__((unused))
@@ -1769,6 +1771,7 @@ __syslog(int type, char *bufp, int len)
 	case 10:
 		if (ret >= 0)
 			return ret;
+		break;
 	default:
 		if (ret >= 0)
 			return 0;
