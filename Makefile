@@ -13,6 +13,8 @@ EXE = $(patsubst %,x86_64/%,$(UTILS))
 
 all : $(EXE)
 
+start_x86_64.o : start_x86_64.s
+
 x86_64/%.o : %.c lib.h lib_x86_64.h syscalls_x86_64.h
 	@[ -d x86_64 ] || mkdir x86_64
 	$(CC) $(CFLAGS) -c -nostdlib -ffreestanding $< -o $@
@@ -32,6 +34,8 @@ ASFLAGS = --32 -march=i386
 EXE = $(patsubst %,dos/%.com,$(UTILS))
 
 all : $(EXE)
+
+start_dos.o : start_dos.s
 
 dos/%.o : %.c lib.h
 	@[ -d dos ] || mkdir dos
