@@ -2,6 +2,13 @@
 
 ARCH=`uname -m`
 
+# check for Arch Linux
+if [ -e /etc/arch-release ]; then
+	CMD_ARCH="uname -m"
+else
+	CMD_ARCH="arch"
+fi
+
 echo "Executing tests ..."
 echo
 
@@ -18,7 +25,9 @@ echo "false     : pass."
 
 # yes
 
-echo "yes       : no test."
+[ "`${ARCH}/yes|head -n1`" = "y" -a "`${ARCH}/yes a b|head -n1`" = "a b" ] || \
+	{ echo "yes: fail!"; exit 1; }
+echo "yes       : pass."
 
 # clear
 
@@ -50,7 +59,7 @@ echo "uname     : pass."
 
 # arch
 
-[ "`${ARCH}/arch`" = "`arch`" ] || { echo "arch: fail!"; exit 1; }
+[ "`${ARCH}/arch`" = "`${CMD_ARCH}`" ] || { echo "arch: fail!"; exit 1; }
 echo "arch      : pass."
 
 # hostname
@@ -60,13 +69,17 @@ echo "hostname  : pass."
 
 # sleep
 
-#${ARCH}/sleep 1s || { echo "sleep failed!"; exit 1; }
-#echo "sleep passed."
-echo "sleep     : skipped."
+${ARCH}/sleep 0 0s || { echo "sleep: fail!"; exit 1; }
+echo "sleep     : pass."
 
 # chvt
 
-echo "chvt      : no test."
+${ARCH}/chvt 1
+if [ $? -eq 0 ]; then
+	echo "chvt: fail!"
+	exit 1
+fi
+echo "chvt      : pass."
 
 # reset
 
@@ -75,7 +88,9 @@ echo "reset     : pass."
 
 # basename
 
-echo "basename  : no test."
+[ "`${ARCH}/basename inc/stdio.h .h`" = "`basename inc/stdio.h .h`" ] || \
+	{ echo "basename: fail!"; exit 1; }
+echo "basename  : pass."
 
 # chroot
 
@@ -103,11 +118,22 @@ echo "sync      : skipped."
 
 # nice
 
-echo "nice      : no test."
+${ARCH}/nice -n 10 sleep 5 &
+PID=$!
+[ `ps -q $PID -o ni|tail -n1|tr -d " "` -eq 10 ] || \
+	{ echo "nice: fail!"; exit 1; }
+kill $PID
+echo "nice      : pass."
 
 # renice
 
-echo "renice    : no test."
+sleep 5 &
+PID=$!
+${ARCH}/renice -n 10 $PID
+[ `ps -q $PID -o ni|tail -n1|tr -d " "` -eq 10 ] || \
+	{ echo "renice: fail!"; exit 1; }
+kill $PID
+echo "renice    : pass."
 
 # dmesg
 
@@ -117,15 +143,35 @@ echo "dmesg     : pass."
 
 # rmdir
 
-echo "rmdir     : no test."
+DIR1=`mktemp -d`
+DIR2=`mktemp -d`/
+mkdir -p $DIR1
+mkdir -p $DIR2
+${ARCH}/rmdir $DIR1 $DIR2
+[ ! -e $DIR1 -a ! -e $DIR2 ] || { echo "rmdir: fail!"; exit 1; }
+rmdir $DIR1 $DIR2 &>/dev/null
+echo "rmdir     : pass."
 
 # cat
 
-echo "cat       : no test."
+FILE1=`mktemp`
+FILE2=`mktemp`
+${ARCH}/cat -v /bin/true >$FILE1
+cat -v /bin/true >$FILE2
+cmp -s $FILE1 $FILE2
+[ $? -eq 0 -a "`echo foo|${ARCH}/cat`" = "foo" ] || { echo "cat: fail!"; exit 1; }
+rm -f $FILE1 $FILE2
+echo "cat       : pass."
 
 # cmp
 
-echo "cmp       : no test."
+FILE1=`mktemp`
+FILE2=`mktemp`
+</bin/true ${ARCH}/cmp -l - /bin/false|tr -d " ">$FILE1
+</bin/true cmp -l - /bin/false|tr -d " ">$FILE2
+cmp -s $FILE1 $FILE2 || { echo "cmp: fail!"; exit 1; }
+rm -f $FILE1 $FILE2
+echo "cmp       : pass."
 
 # nohup
 
@@ -133,7 +179,12 @@ echo "nohup     : no test."
 
 # tee
 
-echo "tee       : no test."
+FILE=`mktemp`
+TEE=`echo -n foo|${ARCH}/tee -i $FILE`
+[ "`cat $FILE`" = "foo" -a "$TEE" = "foo" ] || \
+	{ echo "tee: fail!"; exit 1; }
+rm -f $FILE
+echo "tee       : pass."
 
 # env
 
