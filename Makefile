@@ -56,4 +56,7 @@ clean :
 	rm -rf x86_64/
 	rm -rf dos/
 
-.PHONY : clean cppcheck dosbox
+test : all
+	@sh tests.sh
+
+.PHONY : clean cppcheck dosbox test

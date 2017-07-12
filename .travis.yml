@@ -2,4 +2,4 @@ language: c
 dist: trusty
 
 script:
-  - "make all; make all ARCH=dos"
+  - "make all && make all ARCH=dos && make test"
