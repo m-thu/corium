@@ -120,7 +120,7 @@ echo "sync      : skipped."
 
 ${ARCH}/nice -n 10 sleep 5 &
 PID=$!
-[ `ps -q $PID -o ni|tail -n1|tr -d " "` -eq 10 ] || \
+[ `ps -p $PID -o ni|tail -n1|tr -d " "` -eq 10 ] || \
 	{ echo "nice: fail!"; exit 1; }
 kill $PID
 echo "nice      : pass."
@@ -130,7 +130,7 @@ echo "nice      : pass."
 sleep 5 &
 PID=$!
 ${ARCH}/renice -n 10 $PID
-[ `ps -q $PID -o ni|tail -n1|tr -d " "` -eq 10 ] || \
+[ `ps -p $PID -o ni|tail -n1|tr -d " "` -eq 10 ] || \
 	{ echo "renice: fail!"; exit 1; }
 kill $PID
 echo "renice    : pass."
@@ -148,8 +148,9 @@ DIR2=`mktemp -d`/
 mkdir -p $DIR1
 mkdir -p $DIR2
 ${ARCH}/rmdir $DIR1 $DIR2
-[ ! -e $DIR1 -a ! -e $DIR2 ] || { echo "rmdir: fail!"; exit 1; }
-rmdir $DIR1 $DIR2 &>/dev/null
+[ ! -d $DIR1 -a ! -d $DIR2 ] || { echo "rmdir: fail!"; exit 1; }
+[ -d $DIR1 ] && rmdir $DIR1
+[ -d $DIR2 ] && rmdir $DIR2
 echo "rmdir     : pass."
 
 # cat
