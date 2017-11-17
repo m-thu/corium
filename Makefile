@@ -7,7 +7,7 @@ UTILS = true false yes clear echo printenv pwd uname arch \
 	dmesg rmdir cat cmp nohup __sh tee env
 CFLAGS = -std=gnu11 -pedantic -Wall -Wextra -Os -pipe \
 	 -fno-unwind-tables -fno-asynchronous-unwind-tables \
-	 -Wno-unused-function
+	 -Wno-unused-function -fno-stack-protector
 STRIP = strip
 EXE = $(patsubst %,x86_64/%,$(UTILS))
 
